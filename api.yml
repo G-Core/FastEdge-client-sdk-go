@@ -733,6 +733,119 @@ paths:
             text/plain:
               schema:
                 type: string
+  /v1/apps/{id}/logs:
+    get:
+      summary: List application logs
+      tags:
+      - Apps 
+      description: 'List logs for the app'
+      parameters:
+      - name: id
+        in: path
+        description: ID of the app
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: from
+        in: query
+        description: Reporting period start time, RFC3339 format. Default 1 hour ago.
+        schema:
+          type: string
+          format: date-time
+          example: 2023-12-31T23:59:59Z
+      - name: to
+        in: query
+        description: Reporting period end time, RFC3339 format. Default current time in UTC.
+        schema:
+          type: string
+          format: date-time
+          example: 2024-01-31T23:59:59Z
+      - name: edge
+        in: query
+        description: Edge name
+        schema:
+          type: string
+          format: string
+      - name: sort
+        in: query
+        description: Sort order (default desc)
+        schema:
+          type: string
+          format: string
+          enum: [desc, asc]
+      - name: current_page
+        in: query
+        description: Current page
+        schema:
+          type: integer
+          format: int64
+      - name: page_size
+        in: query
+        description: Page size
+        schema:
+          type: integer
+          format: int64
+          default: 25
+      - name: search
+        in: query
+        description: Search string
+        example: "upstream timeout"
+        schema:
+          type: string
+          format: string
+      - name: client_ip 
+        in: query
+        description: Search by client IP
+        example: "8.8.4.4"
+        schema:
+          type: string
+          format: ipv4
+      responses:
+        '200':
+          description: A paged array of logs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  page_size:
+                    type: integer
+                    description: Number of logs per page
+                  current_page:
+                    type: integer
+                    description: Current page number
+                  total_pages:
+                    type: integer
+                    description: Total number of pages
+                  logs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/log'
+        400:
+          description: Bad request
+          content:
+            text/plain:
+              schema:
+                type: string
+        401:
+          description: Forbidden
+          content:
+            text/plain:
+              schema:
+                type: string
+        500:
+          description: Error occurred
+          content:
+            text/plain:
+              schema:
+                type: string
+        503:
+          description: Service unavailable
+          content:
+            text/plain:
+              schema:
+                type: string
 
   /v1/clients:
     get:
@@ -979,3 +1092,31 @@ components:
         app_count:
           type: integer
           description: Actual allowed number of apps
+    log:
+      type: object
+      properties:
+        id:
+          type: string
+          title: Id of the log
+          description: Id of the log
+        app_name:
+          type: string
+          title: Name of the application
+          description: Name of the application
+        timestamp:
+          type: string
+          format: date-time
+          title: Timstamp of a log in RFC3339 format
+          description: Timestamp of a log in RFC3339 format
+        log:
+          type: string
+          title: Log message
+          description: Log message
+        edge:
+          type: string
+          title: Edge name 
+          description: Edge name
+        client_ip:
+          type: string
+          title: Client IP
+          description: Client IP

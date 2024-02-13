@@ -34,6 +34,12 @@ const (
 	UpdateAppJSONBodyLogNone  UpdateAppJSONBodyLog = "none"
 )
 
+// Defines values for GetV1AppsIdLogsParamsSort.
+const (
+	Asc  GetV1AppsIdLogsParamsSort = "asc"
+	Desc GetV1AppsIdLogsParamsSort = "desc"
+)
+
 // App defines model for app.
 type App struct {
 	// Binary Binary ID
@@ -172,6 +178,27 @@ type DurationStats struct {
 	Time time.Time `json:"time"`
 }
 
+// Log defines model for log.
+type Log struct {
+	// AppName Name of the application
+	AppName *string `json:"app_name,omitempty"`
+
+	// ClientIp Client IP
+	ClientIp *string `json:"client_ip,omitempty"`
+
+	// Edge Edge name
+	Edge *string `json:"edge,omitempty"`
+
+	// Id Id of the log
+	Id *string `json:"id,omitempty"`
+
+	// Log Log message
+	Log *string `json:"log,omitempty"`
+
+	// Timestamp Timestamp of a log in RFC3339 format
+	Timestamp *time.Time `json:"timestamp,omitempty"`
+}
+
 // Plan defines model for plan.
 type Plan struct {
 	// MaxDuration Max duration in msec
@@ -213,6 +240,36 @@ type UpdateAppJSONBody struct {
 
 // UpdateAppJSONBodyLog defines parameters for UpdateApp.
 type UpdateAppJSONBodyLog string
+
+// GetV1AppsIdLogsParams defines parameters for GetV1AppsIdLogs.
+type GetV1AppsIdLogsParams struct {
+	// From Reporting period start time, RFC3339 format. Default 1 hour ago.
+	From *time.Time `form:"from,omitempty" json:"from,omitempty"`
+
+	// To Reporting period end time, RFC3339 format. Default current time in UTC.
+	To *time.Time `form:"to,omitempty" json:"to,omitempty"`
+
+	// Edge Edge name
+	Edge *string `form:"edge,omitempty" json:"edge,omitempty"`
+
+	// Sort Sort order (default desc)
+	Sort *GetV1AppsIdLogsParamsSort `form:"sort,omitempty" json:"sort,omitempty"`
+
+	// CurrentPage Current page
+	CurrentPage *int64 `form:"current_page,omitempty" json:"current_page,omitempty"`
+
+	// PageSize Page size
+	PageSize *int64 `form:"page_size,omitempty" json:"page_size,omitempty"`
+
+	// Search Search string
+	Search *string `form:"search,omitempty" json:"search,omitempty"`
+
+	// ClientIp Search by client IP
+	ClientIp *string `form:"client_ip,omitempty" json:"client_ip,omitempty"`
+}
+
+// GetV1AppsIdLogsParamsSort defines parameters for GetV1AppsIdLogs.
+type GetV1AppsIdLogsParamsSort string
 
 // CompileJavaScriptMultipartBody defines parameters for CompileJavaScript.
 type CompileJavaScriptMultipartBody struct {
@@ -374,6 +431,9 @@ type ClientInterface interface {
 
 	UpdateApp(ctx context.Context, id int64, body UpdateAppJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetV1AppsIdLogs request
+	GetV1AppsIdLogs(ctx context.Context, id int64, params *GetV1AppsIdLogsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListBinaries request
 	ListBinaries(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -509,6 +569,18 @@ func (c *ClientSDK) UpdateAppWithBody(ctx context.Context, id int64, contentType
 
 func (c *ClientSDK) UpdateApp(ctx context.Context, id int64, body UpdateAppJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpdateAppRequest(c.Server, id, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *ClientSDK) GetV1AppsIdLogs(ctx context.Context, id int64, params *GetV1AppsIdLogsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetV1AppsIdLogsRequest(c.Server, id, params)
 	if err != nil {
 		return nil, err
 	}
@@ -888,6 +960,174 @@ func NewUpdateAppRequestWithBody(server string, id int64, contentType string, bo
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewGetV1AppsIdLogsRequest generates requests for GetV1AppsIdLogs
+func NewGetV1AppsIdLogsRequest(server string, id int64, params *GetV1AppsIdLogsParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/apps/%s/logs", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.From != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "from", runtime.ParamLocationQuery, *params.From); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.To != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "to", runtime.ParamLocationQuery, *params.To); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Edge != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "edge", runtime.ParamLocationQuery, *params.Edge); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Sort != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "sort", runtime.ParamLocationQuery, *params.Sort); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.CurrentPage != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "current_page", runtime.ParamLocationQuery, *params.CurrentPage); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.PageSize != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page_size", runtime.ParamLocationQuery, *params.PageSize); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Search != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "search", runtime.ParamLocationQuery, *params.Search); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.ClientIp != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "client_ip", runtime.ParamLocationQuery, *params.ClientIp); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	return req, nil
 }
@@ -1450,6 +1690,9 @@ type ClientWithResponsesInterface interface {
 
 	UpdateAppWithResponse(ctx context.Context, id int64, body UpdateAppJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateAppResponse, error)
 
+	// GetV1AppsIdLogsWithResponse request
+	GetV1AppsIdLogsWithResponse(ctx context.Context, id int64, params *GetV1AppsIdLogsParams, reqEditors ...RequestEditorFn) (*GetV1AppsIdLogsResponse, error)
+
 	// ListBinariesWithResponse request
 	ListBinariesWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListBinariesResponse, error)
 
@@ -1612,6 +1855,38 @@ func (r UpdateAppResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r UpdateAppResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetV1AppsIdLogsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		// CurrentPage Current page number
+		CurrentPage *int   `json:"current_page,omitempty"`
+		Logs        *[]Log `json:"logs,omitempty"`
+
+		// PageSize Number of logs per page
+		PageSize *int `json:"page_size,omitempty"`
+
+		// TotalPages Total number of pages
+		TotalPages *int `json:"total_pages,omitempty"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r GetV1AppsIdLogsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetV1AppsIdLogsResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -1959,6 +2234,15 @@ func (c *ClientWithResponses) UpdateAppWithResponse(ctx context.Context, id int6
 	return ParseUpdateAppResponse(rsp)
 }
 
+// GetV1AppsIdLogsWithResponse request returning *GetV1AppsIdLogsResponse
+func (c *ClientWithResponses) GetV1AppsIdLogsWithResponse(ctx context.Context, id int64, params *GetV1AppsIdLogsParams, reqEditors ...RequestEditorFn) (*GetV1AppsIdLogsResponse, error) {
+	rsp, err := c.GetV1AppsIdLogs(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetV1AppsIdLogsResponse(rsp)
+}
+
 // ListBinariesWithResponse request returning *ListBinariesResponse
 func (c *ClientWithResponses) ListBinariesWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListBinariesResponse, error) {
 	rsp, err := c.ListBinaries(ctx, reqEditors...)
@@ -2203,6 +2487,42 @@ func ParseUpdateAppResponse(rsp *http.Response) (*UpdateAppResponse, error) {
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest AppShort
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetV1AppsIdLogsResponse parses an HTTP response from a GetV1AppsIdLogsWithResponse call
+func ParseGetV1AppsIdLogsResponse(rsp *http.Response) (*GetV1AppsIdLogsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetV1AppsIdLogsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			// CurrentPage Current page number
+			CurrentPage *int   `json:"current_page,omitempty"`
+			Logs        *[]Log `json:"logs,omitempty"`
+
+			// PageSize Number of logs per page
+			PageSize *int `json:"page_size,omitempty"`
+
+			// TotalPages Total number of pages
+			TotalPages *int `json:"total_pages,omitempty"`
+		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -2518,52 +2838,59 @@ func ParseTotalCallsResponse(rsp *http.Response) (*TotalCallsResponse, error) {
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
-	"NwAA//+BN2QDFUkAAA==",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file
