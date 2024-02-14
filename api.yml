@@ -780,6 +780,7 @@ paths:
         schema:
           type: integer
           format: int64
+          default: 1
       - name: page_size
         in: query
         description: Page size
@@ -958,6 +959,16 @@ components:
           description: Logging channel (by default - kafka, which allows exploring logs with API)
           nullable: true
           enum: [kafka, none]
+        debug:
+          type: boolean
+          writeOnly: true
+          description: Switch on logging for 30 minutes (switched off by default)
+          default: false
+        debug_until:
+          type: string
+          format: date-time
+          readOnly: true
+          description: When debugging finishes
     binary_short:
       required:
       - id
