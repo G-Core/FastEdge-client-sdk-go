@@ -733,6 +733,41 @@ paths:
             text/plain:
               schema:
                 type: string
+  /v1/apps/by-name/{name}:
+    get:
+      tags:
+      - Apps
+      summary: Get app id by app name
+      operationId: getAppIdByName
+      parameters:
+      - name: name
+        in: path
+        description: Name of the app
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          description: Ok
+          content:
+            application/json:
+              schema:
+                type: integer
+                format: int64
+        400:
+          description: Bad request
+          content:
+            text/plain:
+              schema:
+                type: string
+        401:
+          description: Unauthorised
+        500:
+          description: Error occurred
+          content:
+            text/plain:
+              schema:
+                type: string
   /v1/apps/{id}/logs:
     get:
       summary: List application logs
