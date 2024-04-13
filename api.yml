@@ -29,12 +29,12 @@ tags:
     description: Client groups for binary visibility
 
 paths:
-  /v1/stats/total_calls:
+  /v1/stats/calls:
     get:
       tags:
       - Stats
       summary: Call stats for all client apps
-      operationId: TotalCalls
+      operationId: StatsCalls
       parameters:
       - name: from
         in: query
@@ -57,63 +57,12 @@ paths:
         schema:
           type: integer
           default: 60
-      responses:
-        200:
-          description: Ok
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                - stats
-                properties:
-                  stats:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/call_stats'
-        401:
-          description: Unauthorised
-        500:
-          description: Error occurred
-          content:
-            text/plain:
-              schema:
-                type: string
-  /v1/stats/app_calls/{id}:
-    get:
-      tags:
-      - Stats
-      summary: Call stats for specific app
-      operationId: AppCalls
-      parameters:
       - name: id
-        in: path
-        description: App id
-        required: true
+        in: query
+        description: App ID
         schema:
           type: integer
           format: int64
-      - name: from
-        in: query
-        description: Reporting period start time, RFC3339 format
-        required: true
-        schema:
-          type: string
-          format: date-time
-      - name: to
-        in: query
-        description: Reporting period end time (not included into reporting period), RFC3339 format
-        required: true
-        schema:
-          type: string
-          format: date-time
-      - name: step
-        in: query
-        description: Reporting granularity, in seconds
-        required: true
-        schema:
-          type: integer
-          default: 60
       responses:
         200:
           description: Ok
@@ -128,25 +77,16 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/call_stats'
-        401:
-          description: Unauthorised
-        500:
-          description: Error occurred
-          content:
-            text/plain:
-              schema:
-                type: string
-  /v1/stats/app_duration/{id}:
+  /v1/stats/app_duration:
     get:
       tags:
       - Stats
       summary: Execution duration stats for specific app
-      operationId: AppDuration
+      operationId: StatsDuration
       parameters:
       - name: id
-        in: path
-        description: App id
-        required: true
+        in: query
+        description: App ID
         schema:
           type: integer
           format: int64
@@ -185,25 +125,17 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/duration_stats'
-        401:
-          description: Unauthorised
-        500:
-          description: Error occurred
-          content:
-            text/plain:
-              schema:
-                type: string
  
   /v1/binaries:
     get:
       tags:
       - Binaries
-      summary: List client's binaries
+      summary: List binaries/templates
       operationId: listBinaries
       parameters:
       - name: shared
         in: query
-        description: Binaries shared with me
+        description: Templates shared with me
         required: false
         schema:
           type: boolean
@@ -229,14 +161,6 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/binary_short'
-        401:
-          description: Unauthorised
-        500:
-          description: Error occurred
-          content:
-            text/plain:
-              schema:
-                type: string
   /v1/binaries/raw:
     post:
       tags:
@@ -256,36 +180,25 @@ paths:
           content:
             application/json:
               schema:
-                type: integer
-                format: int64
+                $ref: '#/components/schemas/binary_short'
         400:
           description: Bad request
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-        401:
-          description: Unauthorised
-        413:
-          description: Binary is too big
+                $ref: '#/components/schemas/error'
         429:
           description: Limit exceeded
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-        500:
-          description: Error occurred
-          content:
-            text/plain:
-              schema:
-                type: string
+                $ref: '#/components/schemas/error'
         503:
           description: Service unavailable
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
+                $ref: '#/components/schemas/error'
   /v1/binaries/{id}:
     get:
       tags:
@@ -310,17 +223,11 @@ paths:
         400:
           description: Bad request
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-        401:
-          description: Unauthorised
-        500:
-          description: Error occurred
-          content:
-            text/plain:
-              schema:
-                type: string
+                $ref: '#/components/schemas/error'
+        404:
+          description: Not found
     delete:
       tags:
       - Binaries
@@ -335,28 +242,22 @@ paths:
           type: integer
           format: int64
       responses:
-        200:
+        204:
           description: Ok
         400:
           description: Bad request
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-        401:
-          description: Unauthorised
-        500:
-          description: Error occurred
-          content:
-            text/plain:
-              schema:
-                type: string
+                $ref: '#/components/schemas/error'
+        404:
+          description: Not found
         503:
           description: Service unavailable
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
+                $ref: '#/components/schemas/error'
   /v1/binaries/{id}/metadata:
     get:
       tags:
@@ -381,17 +282,11 @@ paths:
         400:
           description: Bad request
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-        401:
-          description: Unauthorised
-        500:
-          description: Error occurred
-          content:
-            text/plain:
-              schema:
-                type: string
+                $ref: '#/components/schemas/error'
+        404:
+          description: Not found
     put:
       tags:
       - Binaries
@@ -418,23 +313,17 @@ paths:
         400:
           description: Bad request
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-        401:
-          description: Unauthorised
-        500:
-          description: Error occurred
-          content:
-            text/plain:
-              schema:
-                type: string
+                $ref: '#/components/schemas/error'
+        404:
+          description: Not found
         503:
           description: Service unavailable
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
+                $ref: '#/components/schemas/error'
 
   /v1/apps:
     get:
@@ -442,6 +331,13 @@ paths:
       - Apps
       summary: List client's apps
       operationId: listApps
+      parameters:
+      - name: name
+        in: query 
+        description: Name of the app
+        required: false
+        schema:
+          type: string
       responses:
         200:
           description: Ok
@@ -456,14 +352,8 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/app_short'
-        401:
-          description: Unauthorised
-        500:
-          description: Error occurred
-          content:
-            text/plain:
-              schema:
-                type: string
+        404:
+          description: Not found
     post:
       tags:
       - Apps
@@ -486,29 +376,21 @@ paths:
         400:
           description: Bad request
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-        401:
-          description: Unauthorised
+                $ref: '#/components/schemas/error'
         429:
           description: Limit exceeded
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-        500:
-          description: Error occurred
-          content:
-            text/plain:
-              schema:
-                type: string
+                $ref: '#/components/schemas/error'
         503:
           description: Service unavailable
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
+                $ref: '#/components/schemas/error'
       x-codegen-request-body-name: app
   /v1/apps/{id}:
     get:
@@ -534,17 +416,11 @@ paths:
         400:
           description: Bad request
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-        401:
-          description: Unauthorised
-        500:
-          description: Error occurred
-          content:
-            text/plain:
-              schema:
-                type: string
+                $ref: '#/components/schemas/error'
+        404:
+          description: Not found
     put:
       tags:
       - Apps
@@ -580,23 +456,17 @@ paths:
         400:
           description: Bad request
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-        401:
-          description: Unauthorised
-        500:
-          description: Error occurred
-          content:
-            text/plain:
-              schema:
-                type: string
+                $ref: '#/components/schemas/error'
+        404:
+          description: Not found
         503:
           description: Service unavailable
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
+                $ref: '#/components/schemas/error'
       x-codegen-request-body-name: app
     patch:
       tags:
@@ -631,8 +501,8 @@ paths:
             text/plain:
               schema:
                 type: string
-        401:
-          description: Unauthorised
+        404:
+          description: Not found
         500:
           description: Error occurred
           content:
@@ -660,17 +530,16 @@ paths:
           type: integer
           format: int64
       responses:
-        200:
+        204:
           description: Ok
-          content: {}
         400:
           description: Bad request
           content:
             text/plain:
               schema:
                 type: string
-        401:
-          description: Unauthorised
+        404:
+          description: Not found
         500:
           description: Error occurred
           content:
@@ -689,6 +558,7 @@ paths:
       - Apps
       summary: Get app id by app name
       operationId: getAppIdByName
+      deprecated: true
       parameters:
       - name: name
         in: path
@@ -707,20 +577,13 @@ paths:
         400:
           description: Bad request
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-        401:
-          description: Unauthorised
-        500:
-          description: Error occurred
-          content:
-            text/plain:
-              schema:
-                type: string
+                $ref: '#/components/schemas/error'
   /v1/apps/{id}/logs:
     get:
       summary: List application logs
+      operationId: listLogs
       tags:
       - Apps 
       description: 'List logs for the app'
@@ -759,20 +622,18 @@ paths:
           type: string
           format: string
           enum: [desc, asc]
-      - name: current_page
+      - description: Limit for pagination
         in: query
-        description: Current page
+        name: limit
         schema:
+          format: int32
           type: integer
-          format: int64
-          default: 1
-      - name: page_size
+      - description: Offset for pagination
         in: query
-        description: Page size
+        name: offset
         schema:
+          format: int32
           type: integer
-          format: int64
-          default: 25
       - name: search
         in: query
         description: Search string
@@ -788,22 +649,21 @@ paths:
           type: string
           format: ipv4
       responses:
-        '200':
+        200:
           description: A paged array of logs
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  page_size:
+                  total_count:
                     type: integer
-                    description: Number of logs per page
-                  current_page:
+                    format: int32
+                    description: Number of total logs available
+                  offset:
                     type: integer
-                    description: Current page number
-                  total_pages:
-                    type: integer
-                    description: Total number of pages
+                    format: int32
+                    description: Current request offset
                   logs:
                     type: array
                     items:
@@ -811,27 +671,17 @@ paths:
         400:
           description: Bad request
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-        401:
-          description: Forbidden
-          content:
-            text/plain:
-              schema:
-                type: string
-        500:
-          description: Error occurred
-          content:
-            text/plain:
-              schema:
-                type: string
+                $ref: '#/components/schemas/error'
+        404:
+          description: Not found
         503:
           description: Service unavailable
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
+                $ref: '#/components/schemas/error'
 
   /v1/me:
     get:
@@ -849,17 +699,9 @@ paths:
         400:
           description: Bad request
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-        401:
-          description: Unauthorised
-        500:
-          description: Error occurred
-          content:
-            text/plain:
-              schema:
-                type: string
+                $ref: '#/components/schemas/error'
 
   /v1/groups:
     get:
@@ -870,6 +712,7 @@ paths:
       parameters:
         - in: query
           name: member_of
+          description: Am I a member of the group?
           required: false
           schema:
             type: boolean
@@ -888,14 +731,6 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/group_short'
-        401:
-          description: Unauthorised
-        500:
-          description: Error occurred
-          content:
-            text/plain:
-              schema:
-                type: string
     post:
       tags:
       - Groups
@@ -919,16 +754,7 @@ paths:
           content:
             application/json:
               schema:
-                type: integer
-                format: int64
-        401:
-          description: Unauthorised
-        500:
-          description: Error occurred
-          content:
-            text/plain:
-              schema:
-                type: string
+                $ref: '#/components/schemas/group_short'
   /v1/groups/{id}:
     get:
       tags:
@@ -953,17 +779,11 @@ paths:
         400:
           description: Bad request
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-        401:
-          description: Unauthorised
-        500:
-          description: Error occurred
-          content:
-            text/plain:
-              schema:
-                type: string
+                $ref: '#/components/schemas/error'
+        404:
+          description: Not found
     put:
       tags:
       - Groups
@@ -992,20 +812,18 @@ paths:
       responses:
         200:
           description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/group_short'
         400:
           description: Bad request
           content:
             text/plain:
               schema:
                 type: string
-        401:
-          description: Unauthorised
-        500:
-          description: Error occurred
-          content:
-            text/plain:
-              schema:
-                type: string
+        404:
+          description: Not found
     delete:
       tags:
       - Groups
@@ -1027,7 +845,7 @@ paths:
           type: boolean
           default: false
       responses:
-        200:
+        204:
           description: Ok
         400:
           description: Bad request
@@ -1035,14 +853,8 @@ paths:
             text/plain:
               schema:
                 type: string
-        401:
-          description: Unauthorised
-        500:
-          description: Error occurred
-          content:
-            text/plain:
-              schema:
-                type: string
+        404:
+          description: Not found
   /v1/groups/{id}/member:
     post:
       tags:
@@ -1065,28 +877,22 @@ paths:
               $ref: '#/components/schemas/group_member'
         required: false
       responses:
-        200:
+        204:
           description: Ok
         400:
           description: Bad request
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-        401:
-          description: Unauthorised
+                $ref: '#/components/schemas/error'
+        404:
+          description: Not found
         429:
           description: Limit exceeded
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-        500:
-          description: Error occurred
-          content:
-            text/plain:
-              schema:
-                type: string
+                $ref: '#/components/schemas/error'
     delete:
       tags:
       - Groups
@@ -1101,23 +907,17 @@ paths:
           type: integer
           format: int64
       responses:
-        200:
+        204:
           description: Ok
         400:
           description: Bad request
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-        401:
-          description: Unauthorised
-        500:
-          description: Error occurred
-          content:
-            text/plain:
-              schema:
-                type: string
-  /v1/groups/{id}/member/{member_id}:
+                $ref: '#/components/schemas/error'
+        404:
+          description: Not found
+  /v1/groups/{id}/member/{client_id}:
     delete:
       tags:
       - Groups
@@ -1131,7 +931,7 @@ paths:
         schema:
           type: integer
           format: int64
-      - name: member_id
+      - name: client_id
         in: path
         description: Member client ID
         required: true
@@ -1139,22 +939,16 @@ paths:
           type: integer
           format: int64
       responses:
-        200:
+        204:
           description: Ok
         400:
           description: Bad request
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-        401:
-          description: Unauthorised
-        500:
-          description: Error occurred
-          content:
-            text/plain:
-              schema:
-                type: string
+                $ref: '#/components/schemas/error'
+        404:
+          description: Not found
 
 components:
   schemas:
@@ -1179,7 +973,7 @@ components:
           description: App URL
         status:
           type: integer
-          description: 'Status code:<br>0 - draft (inactive)<br>1 - enabled<br>2 - disabled<br>3/4 - hourly/daily call limit exceeded)'
+          description: 'Status code:<br>0 - draft (inactive)<br>1 - enabled<br>2 - disabled<br>3 - hourly call limit exceeded<br>4 - daily call limit exceeded<br>5 - suspended'
         binary:
           type: integer
           format: int64
@@ -1203,7 +997,7 @@ components:
           description: Binary ID
         status:
           type: integer
-          description: 'Status code:<br>0 - draft (inactive)<br>1 - enabled<br>2 - disabled<br>3/4 - hourly/daily call limit exceeded)'
+          description: 'Status code:<br>0 - draft (inactive)<br>1 - enabled<br>2 - disabled<br>3 - hourly call limit exceeded<br>4 - daily call limit exceeded<br>5 - suspended'
         plan:
           readOnly: true
           type: string
@@ -1268,20 +1062,25 @@ components:
         group_id:
           type: integer
           format: int64
-          description: Binary ID
+          description: ID of the group binary is shared to
     binary:
       required:
+      - id
       - status
-      - type
+      - source
       - group_id
       type: object
       properties:
+        id:
+          type: integer
+          format: int64
+          description: Binary ID
         status:
           type: integer
           description: 'Status code:<br>0 - pending<br>1 - compiled<br>2 - compilation failed (errors available)<br>3 - compilation failed (errors not available)<br>4 - resulting binary exceeded the limit<br>5 - unsupported source language'
-        type:
+        source:
           type: integer
-          description: Type
+          description: 'Source language:<br>0 - unknown<br>1 - Rust<br>2 - JavaScript'
         errors:
           type: string
           description: Compilation errors
@@ -1297,7 +1096,7 @@ components:
         group_id:
           type: integer
           format: int64
-          description: Binary ID
+          description: ID of the group binary is shared to
     binary_metadata:
       type: object
       required:
@@ -1341,6 +1140,9 @@ components:
           type: boolean
           description: Is this field mandatory?
           default: false
+        descr:
+          type: string
+          description: Parameter description
     call_stats:
       type: object
       description: Edge app call statistics
@@ -1422,7 +1224,7 @@ components:
       properties:
         status:
           type: integer
-          description: 'Status code:<br>1 - enabled<br>2 - disabled<br>3/4 - hourly/daily call limit exceeded)'
+          description: 'Status code:<br>1 - enabled<br>2 - disabled<br>3 - hourly call limit exceeded<br>4 - daily call limit exceeded<br>5 - suspended'
         hourly_limit:
           type: integer
           description: Max allowed calls for all apps during an hour
@@ -1474,14 +1276,18 @@ components:
       required:
       - id
       - name
+      - member_of
       properties:
         id:
           type: integer
           format: int64
-          description: App ID
+          description: Group ID
         name:
           type: string
-          description: App name
+          description: Group name
+        member_of:
+          type: boolean
+          description: Am I a member of the group?
     group:
       type: object
       required:
@@ -1507,15 +1313,23 @@ components:
     group_member:
       type: object
       required:
-      - id
+      - client_id
       properties:
-        id:
+        client_id:
           type: integer
           format: int64
-          description: App ID
+          description: Client ID
         name:
           type: string
           description: Member name
         can_share:
           type: boolean
           description: Can the member share binaries to the group?
+    error:
+      type: object
+      required:
+      - error
+      properties:
+        error:
+          type: string
+          description: Error message

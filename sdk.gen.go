@@ -41,10 +41,10 @@ const (
 	UpdateAppJSONBodyLogNone  UpdateAppJSONBodyLog = "none"
 )
 
-// Defines values for GetV1AppsIdLogsParamsSort.
+// Defines values for ListLogsParamsSort.
 const (
-	Asc  GetV1AppsIdLogsParamsSort = "asc"
-	Desc GetV1AppsIdLogsParamsSort = "desc"
+	Asc  ListLogsParamsSort = "asc"
+	Desc ListLogsParamsSort = "desc"
 )
 
 // App defines model for app.
@@ -76,7 +76,7 @@ type App struct {
 	// RspHeaders Extra headers to add to the response
 	RspHeaders *map[string]string `json:"rsp_headers,omitempty"`
 
-	// Status Status code:<br>0 - draft (inactive)<br>1 - enabled<br>2 - disabled<br>3/4 - hourly/daily call limit exceeded)
+	// Status Status code:<br>0 - draft (inactive)<br>1 - enabled<br>2 - disabled<br>3 - hourly call limit exceeded<br>4 - daily call limit exceeded<br>5 - suspended
 	Status *int `json:"status,omitempty"`
 
 	// Url App URL
@@ -100,7 +100,7 @@ type AppShort struct {
 	// Name App name
 	Name string `json:"name"`
 
-	// Status Status code:<br>0 - draft (inactive)<br>1 - enabled<br>2 - disabled<br>3/4 - hourly/daily call limit exceeded)
+	// Status Status code:<br>0 - draft (inactive)<br>1 - enabled<br>2 - disabled<br>3 - hourly call limit exceeded<br>4 - daily call limit exceeded<br>5 - suspended
 	Status int `json:"status"`
 
 	// Url App URL
@@ -115,17 +115,20 @@ type Binary struct {
 	// Errors Compilation errors
 	Errors *string `json:"errors,omitempty"`
 
-	// GroupId Binary ID
+	// GroupId ID of the group binary is shared to
 	GroupId int64 `json:"group_id"`
+
+	// Id Binary ID
+	Id int64 `json:"id"`
 
 	// Name Name of the template
 	Name *string `json:"name,omitempty"`
 
+	// Source Source language:<br>0 - unknown<br>1 - Rust<br>2 - JavaScript
+	Source int `json:"source"`
+
 	// Status Status code:<br>0 - pending<br>1 - compiled<br>2 - compilation failed (errors available)<br>3 - compilation failed (errors not available)<br>4 - resulting binary exceeded the limit<br>5 - unsupported source language
 	Status int `json:"status"`
-
-	// Type Type
-	Type int `json:"type"`
 
 	// UnrefSince Not used since (UTC)
 	UnrefSince *string `json:"unref_since,omitempty"`
@@ -154,6 +157,9 @@ type BinaryParam struct {
 	// DataType Parameter type
 	DataType BinaryParamDataType `json:"data_type"`
 
+	// Descr Parameter description
+	Descr *string `json:"descr,omitempty"`
+
 	// Mandatory Is this field mandatory?
 	Mandatory bool `json:"mandatory"`
 
@@ -169,7 +175,7 @@ type BinaryShort struct {
 	// Descr Short description of the template
 	Descr *string `json:"descr,omitempty"`
 
-	// GroupId Binary ID
+	// GroupId ID of the group binary is shared to
 	GroupId int64 `json:"group_id"`
 
 	// Id Binary ID
@@ -214,7 +220,7 @@ type Client struct {
 	// HourlyLimit Max allowed calls for all apps during an hour
 	HourlyLimit int `json:"hourly_limit"`
 
-	// Status Status code:<br>1 - enabled<br>2 - disabled<br>3/4 - hourly/daily call limit exceeded)
+	// Status Status code:<br>1 - enabled<br>2 - disabled<br>3 - hourly call limit exceeded<br>4 - daily call limit exceeded<br>5 - suspended
 	Status int `json:"status"`
 }
 
@@ -251,6 +257,12 @@ type DurationStats struct {
 	Time time.Time `json:"time"`
 }
 
+// Error defines model for error.
+type Error struct {
+	// Error Error message
+	Error string `json:"error"`
+}
+
 // Group defines model for group.
 type Group struct {
 	// Capacity Max number of members (0 means unlimited)
@@ -269,8 +281,8 @@ type GroupMember struct {
 	// CanShare Can the member share binaries to the group?
 	CanShare *bool `json:"can_share,omitempty"`
 
-	// Id App ID
-	Id int64 `json:"id"`
+	// ClientId Client ID
+	ClientId int64 `json:"client_id"`
 
 	// Name Member name
 	Name *string `json:"name,omitempty"`
@@ -278,10 +290,13 @@ type GroupMember struct {
 
 // GroupShort defines model for group_short.
 type GroupShort struct {
-	// Id App ID
+	// Id Group ID
 	Id int64 `json:"id"`
 
-	// Name App name
+	// MemberOf Am I a member of the group?
+	MemberOf bool `json:"member_of"`
+
+	// Name Group name
 	Name string `json:"name"`
 }
 
@@ -304,6 +319,12 @@ type Log struct {
 
 	// Timestamp Timestamp of a log in RFC3339 format
 	Timestamp *time.Time `json:"timestamp,omitempty"`
+}
+
+// ListAppsParams defines parameters for ListApps.
+type ListAppsParams struct {
+	// Name Name of the app
+	Name *string `form:"name,omitempty" json:"name,omitempty"`
 }
 
 // UpdateAppJSONBody defines parameters for UpdateApp.
@@ -335,7 +356,7 @@ type UpdateAppJSONBody struct {
 	// RspHeaders Extra headers to add to the response
 	RspHeaders *map[string]string `json:"rsp_headers,omitempty"`
 
-	// Status Status code:<br>0 - draft (inactive)<br>1 - enabled<br>2 - disabled<br>3/4 - hourly/daily call limit exceeded)
+	// Status Status code:<br>0 - draft (inactive)<br>1 - enabled<br>2 - disabled<br>3 - hourly call limit exceeded<br>4 - daily call limit exceeded<br>5 - suspended
 	Status int `json:"status"`
 
 	// Url App URL
@@ -345,8 +366,8 @@ type UpdateAppJSONBody struct {
 // UpdateAppJSONBodyLog defines parameters for UpdateApp.
 type UpdateAppJSONBodyLog string
 
-// GetV1AppsIdLogsParams defines parameters for GetV1AppsIdLogs.
-type GetV1AppsIdLogsParams struct {
+// ListLogsParams defines parameters for ListLogs.
+type ListLogsParams struct {
 	// From Reporting period start time, RFC3339 format. Default 1 hour ago.
 	From *time.Time `form:"from,omitempty" json:"from,omitempty"`
 
@@ -357,13 +378,13 @@ type GetV1AppsIdLogsParams struct {
 	Edge *string `form:"edge,omitempty" json:"edge,omitempty"`
 
 	// Sort Sort order (default desc)
-	Sort *GetV1AppsIdLogsParamsSort `form:"sort,omitempty" json:"sort,omitempty"`
+	Sort *ListLogsParamsSort `form:"sort,omitempty" json:"sort,omitempty"`
 
-	// CurrentPage Current page
-	CurrentPage *int64 `form:"current_page,omitempty" json:"current_page,omitempty"`
+	// Limit Limit for pagination
+	Limit *int32 `form:"limit,omitempty" json:"limit,omitempty"`
 
-	// PageSize Page size
-	PageSize *int64 `form:"page_size,omitempty" json:"page_size,omitempty"`
+	// Offset Offset for pagination
+	Offset *int32 `form:"offset,omitempty" json:"offset,omitempty"`
 
 	// Search Search string
 	Search *string `form:"search,omitempty" json:"search,omitempty"`
@@ -372,12 +393,12 @@ type GetV1AppsIdLogsParams struct {
 	ClientIp *string `form:"client_ip,omitempty" json:"client_ip,omitempty"`
 }
 
-// GetV1AppsIdLogsParamsSort defines parameters for GetV1AppsIdLogs.
-type GetV1AppsIdLogsParamsSort string
+// ListLogsParamsSort defines parameters for ListLogs.
+type ListLogsParamsSort string
 
 // ListBinariesParams defines parameters for ListBinaries.
 type ListBinariesParams struct {
-	// Shared Binaries shared with me
+	// Shared Templates shared with me
 	Shared *bool `form:"shared,omitempty" json:"shared,omitempty"`
 
 	// Named Binaries with non-empty name
@@ -386,6 +407,7 @@ type ListBinariesParams struct {
 
 // ListGroupsParams defines parameters for ListGroups.
 type ListGroupsParams struct {
+	// MemberOf Am I a member of the group?
 	MemberOf *bool `form:"member_of,omitempty" json:"member_of,omitempty"`
 }
 
@@ -407,8 +429,11 @@ type UpdateGroupJSONBody struct {
 	Name string `json:"name"`
 }
 
-// AppCallsParams defines parameters for AppCalls.
-type AppCallsParams struct {
+// StatsDurationParams defines parameters for StatsDuration.
+type StatsDurationParams struct {
+	// Id App ID
+	Id *int64 `form:"id,omitempty" json:"id,omitempty"`
+
 	// From Reporting period start time, RFC3339 format
 	From time.Time `form:"from" json:"from"`
 
@@ -419,8 +444,8 @@ type AppCallsParams struct {
 	Step int `form:"step" json:"step"`
 }
 
-// AppDurationParams defines parameters for AppDuration.
-type AppDurationParams struct {
+// StatsCallsParams defines parameters for StatsCalls.
+type StatsCallsParams struct {
 	// From Reporting period start time, RFC3339 format
 	From time.Time `form:"from" json:"from"`
 
@@ -429,18 +454,9 @@ type AppDurationParams struct {
 
 	// Step Reporting granularity, in seconds
 	Step int `form:"step" json:"step"`
-}
 
-// TotalCallsParams defines parameters for TotalCalls.
-type TotalCallsParams struct {
-	// From Reporting period start time, RFC3339 format
-	From time.Time `form:"from" json:"from"`
-
-	// To Reporting period end time (not included into reporting period), RFC3339 format
-	To time.Time `form:"to" json:"to"`
-
-	// Step Reporting granularity, in seconds
-	Step int `form:"step" json:"step"`
+	// Id App ID
+	Id *int64 `form:"id,omitempty" json:"id,omitempty"`
 }
 
 // AddAppJSONRequestBody defines body for AddApp for application/json ContentType.
@@ -538,7 +554,7 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 // The interface specification for the client above.
 type ClientInterface interface {
 	// ListApps request
-	ListApps(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ListApps(ctx context.Context, params *ListAppsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// AddAppWithBody request with any body
 	AddAppWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -564,8 +580,8 @@ type ClientInterface interface {
 
 	UpdateApp(ctx context.Context, id int64, body UpdateAppJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetV1AppsIdLogs request
-	GetV1AppsIdLogs(ctx context.Context, id int64, params *GetV1AppsIdLogsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// ListLogs request
+	ListLogs(ctx context.Context, id int64, params *ListLogsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListBinaries request
 	ListBinaries(ctx context.Context, params *ListBinariesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -615,23 +631,20 @@ type ClientInterface interface {
 	AddToGroup(ctx context.Context, id int64, body AddToGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DelFromGroup request
-	DelFromGroup(ctx context.Context, id int64, memberId int64, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DelFromGroup(ctx context.Context, id int64, clientId int64, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetClientMe request
 	GetClientMe(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// AppCalls request
-	AppCalls(ctx context.Context, id int64, params *AppCallsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// StatsDuration request
+	StatsDuration(ctx context.Context, params *StatsDurationParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// AppDuration request
-	AppDuration(ctx context.Context, id int64, params *AppDurationParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// TotalCalls request
-	TotalCalls(ctx context.Context, params *TotalCallsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// StatsCalls request
+	StatsCalls(ctx context.Context, params *StatsCallsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
-func (c *ClientSDK) ListApps(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewListAppsRequest(c.Server)
+func (c *ClientSDK) ListApps(ctx context.Context, params *ListAppsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListAppsRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -750,8 +763,8 @@ func (c *ClientSDK) UpdateApp(ctx context.Context, id int64, body UpdateAppJSONR
 	return c.Client.Do(req)
 }
 
-func (c *ClientSDK) GetV1AppsIdLogs(ctx context.Context, id int64, params *GetV1AppsIdLogsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetV1AppsIdLogsRequest(c.Server, id, params)
+func (c *ClientSDK) ListLogs(ctx context.Context, id int64, params *ListLogsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListLogsRequest(c.Server, id, params)
 	if err != nil {
 		return nil, err
 	}
@@ -966,8 +979,8 @@ func (c *ClientSDK) AddToGroup(ctx context.Context, id int64, body AddToGroupJSO
 	return c.Client.Do(req)
 }
 
-func (c *ClientSDK) DelFromGroup(ctx context.Context, id int64, memberId int64, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDelFromGroupRequest(c.Server, id, memberId)
+func (c *ClientSDK) DelFromGroup(ctx context.Context, id int64, clientId int64, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDelFromGroupRequest(c.Server, id, clientId)
 	if err != nil {
 		return nil, err
 	}
@@ -990,8 +1003,8 @@ func (c *ClientSDK) GetClientMe(ctx context.Context, reqEditors ...RequestEditor
 	return c.Client.Do(req)
 }
 
-func (c *ClientSDK) AppCalls(ctx context.Context, id int64, params *AppCallsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewAppCallsRequest(c.Server, id, params)
+func (c *ClientSDK) StatsDuration(ctx context.Context, params *StatsDurationParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewStatsDurationRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -1002,20 +1015,8 @@ func (c *ClientSDK) AppCalls(ctx context.Context, id int64, params *AppCallsPara
 	return c.Client.Do(req)
 }
 
-func (c *ClientSDK) AppDuration(ctx context.Context, id int64, params *AppDurationParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewAppDurationRequest(c.Server, id, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *ClientSDK) TotalCalls(ctx context.Context, params *TotalCallsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewTotalCallsRequest(c.Server, params)
+func (c *ClientSDK) StatsCalls(ctx context.Context, params *StatsCallsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewStatsCallsRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -1027,7 +1028,7 @@ func (c *ClientSDK) TotalCalls(ctx context.Context, params *TotalCallsParams, re
 }
 
 // NewListAppsRequest generates requests for ListApps
-func NewListAppsRequest(server string) (*http.Request, error) {
+func NewListAppsRequest(server string, params *ListAppsParams) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -1043,6 +1044,28 @@ func NewListAppsRequest(server string) (*http.Request, error) {
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Name != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "name", runtime.ParamLocationQuery, *params.Name); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
 	}
 
 	req, err := http.NewRequest("GET", queryURL.String(), nil)
@@ -1289,8 +1312,8 @@ func NewUpdateAppRequestWithBody(server string, id int64, contentType string, bo
 	return req, nil
 }
 
-// NewGetV1AppsIdLogsRequest generates requests for GetV1AppsIdLogs
-func NewGetV1AppsIdLogsRequest(server string, id int64, params *GetV1AppsIdLogsParams) (*http.Request, error) {
+// NewListLogsRequest generates requests for ListLogs
+func NewListLogsRequest(server string, id int64, params *ListLogsParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -1382,9 +1405,9 @@ func NewGetV1AppsIdLogsRequest(server string, id int64, params *GetV1AppsIdLogsP
 
 		}
 
-		if params.CurrentPage != nil {
+		if params.Limit != nil {
 
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "current_page", runtime.ParamLocationQuery, *params.CurrentPage); err != nil {
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "limit", runtime.ParamLocationQuery, *params.Limit); err != nil {
 				return nil, err
 			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
 				return nil, err
@@ -1398,9 +1421,9 @@ func NewGetV1AppsIdLogsRequest(server string, id int64, params *GetV1AppsIdLogsP
 
 		}
 
-		if params.PageSize != nil {
+		if params.Offset != nil {
 
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page_size", runtime.ParamLocationQuery, *params.PageSize); err != nil {
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "offset", runtime.ParamLocationQuery, *params.Offset); err != nil {
 				return nil, err
 			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
 				return nil, err
@@ -2008,7 +2031,7 @@ func NewAddToGroupRequestWithBody(server string, id int64, contentType string, b
 }
 
 // NewDelFromGroupRequest generates requests for DelFromGroup
-func NewDelFromGroupRequest(server string, id int64, memberId int64) (*http.Request, error) {
+func NewDelFromGroupRequest(server string, id int64, clientId int64) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -2020,7 +2043,7 @@ func NewDelFromGroupRequest(server string, id int64, memberId int64) (*http.Requ
 
 	var pathParam1 string
 
-	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "member_id", runtime.ParamLocationPath, memberId)
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "client_id", runtime.ParamLocationPath, clientId)
 	if err != nil {
 		return nil, err
 	}
@@ -2075,23 +2098,16 @@ func NewGetClientMeRequest(server string) (*http.Request, error) {
 	return req, nil
 }
 
-// NewAppCallsRequest generates requests for AppCalls
-func NewAppCallsRequest(server string, id int64, params *AppCallsParams) (*http.Request, error) {
+// NewStatsDurationRequest generates requests for StatsDuration
+func NewStatsDurationRequest(server string, params *StatsDurationParams) (*http.Request, error) {
 	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
-	if err != nil {
-		return nil, err
-	}
 
 	serverURL, err := url.Parse(server)
 	if err != nil {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/stats/app_calls/%s", pathParam0)
+	operationPath := fmt.Sprintf("/v1/stats/app_duration")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -2103,6 +2119,22 @@ func NewAppCallsRequest(server string, id int64, params *AppCallsParams) (*http.
 
 	if params != nil {
 		queryValues := queryURL.Query()
+
+		if params.Id != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "id", runtime.ParamLocationQuery, *params.Id); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
 
 		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "from", runtime.ParamLocationQuery, params.From); err != nil {
 			return nil, err
@@ -2151,23 +2183,16 @@ func NewAppCallsRequest(server string, id int64, params *AppCallsParams) (*http.
 	return req, nil
 }
 
-// NewAppDurationRequest generates requests for AppDuration
-func NewAppDurationRequest(server string, id int64, params *AppDurationParams) (*http.Request, error) {
+// NewStatsCallsRequest generates requests for StatsCalls
+func NewStatsCallsRequest(server string, params *StatsCallsParams) (*http.Request, error) {
 	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
-	if err != nil {
-		return nil, err
-	}
 
 	serverURL, err := url.Parse(server)
 	if err != nil {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/stats/app_duration/%s", pathParam0)
+	operationPath := fmt.Sprintf("/v1/stats/calls")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -2216,73 +2241,20 @@ func NewAppDurationRequest(server string, id int64, params *AppDurationParams) (
 			}
 		}
 
-		queryURL.RawQuery = queryValues.Encode()
-	}
+		if params.Id != nil {
 
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewTotalCallsRequest generates requests for TotalCalls
-func NewTotalCallsRequest(server string, params *TotalCallsParams) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/v1/stats/total_calls")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		queryValues := queryURL.Query()
-
-		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "from", runtime.ParamLocationQuery, params.From); err != nil {
-			return nil, err
-		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-			return nil, err
-		} else {
-			for k, v := range parsed {
-				for _, v2 := range v {
-					queryValues.Add(k, v2)
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "id", runtime.ParamLocationQuery, *params.Id); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
 				}
 			}
-		}
 
-		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "to", runtime.ParamLocationQuery, params.To); err != nil {
-			return nil, err
-		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-			return nil, err
-		} else {
-			for k, v := range parsed {
-				for _, v2 := range v {
-					queryValues.Add(k, v2)
-				}
-			}
-		}
-
-		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "step", runtime.ParamLocationQuery, params.Step); err != nil {
-			return nil, err
-		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-			return nil, err
-		} else {
-			for k, v := range parsed {
-				for _, v2 := range v {
-					queryValues.Add(k, v2)
-				}
-			}
 		}
 
 		queryURL.RawQuery = queryValues.Encode()
@@ -2340,7 +2312,7 @@ func WithBaseURL(baseURL string) ClientOption {
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
 	// ListAppsWithResponse request
-	ListAppsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListAppsResponse, error)
+	ListAppsWithResponse(ctx context.Context, params *ListAppsParams, reqEditors ...RequestEditorFn) (*ListAppsResponse, error)
 
 	// AddAppWithBodyWithResponse request with any body
 	AddAppWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AddAppResponse, error)
@@ -2366,8 +2338,8 @@ type ClientWithResponsesInterface interface {
 
 	UpdateAppWithResponse(ctx context.Context, id int64, body UpdateAppJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateAppResponse, error)
 
-	// GetV1AppsIdLogsWithResponse request
-	GetV1AppsIdLogsWithResponse(ctx context.Context, id int64, params *GetV1AppsIdLogsParams, reqEditors ...RequestEditorFn) (*GetV1AppsIdLogsResponse, error)
+	// ListLogsWithResponse request
+	ListLogsWithResponse(ctx context.Context, id int64, params *ListLogsParams, reqEditors ...RequestEditorFn) (*ListLogsResponse, error)
 
 	// ListBinariesWithResponse request
 	ListBinariesWithResponse(ctx context.Context, params *ListBinariesParams, reqEditors ...RequestEditorFn) (*ListBinariesResponse, error)
@@ -2417,19 +2389,16 @@ type ClientWithResponsesInterface interface {
 	AddToGroupWithResponse(ctx context.Context, id int64, body AddToGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*AddToGroupResponse, error)
 
 	// DelFromGroupWithResponse request
-	DelFromGroupWithResponse(ctx context.Context, id int64, memberId int64, reqEditors ...RequestEditorFn) (*DelFromGroupResponse, error)
+	DelFromGroupWithResponse(ctx context.Context, id int64, clientId int64, reqEditors ...RequestEditorFn) (*DelFromGroupResponse, error)
 
 	// GetClientMeWithResponse request
 	GetClientMeWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetClientMeResponse, error)
 
-	// AppCallsWithResponse request
-	AppCallsWithResponse(ctx context.Context, id int64, params *AppCallsParams, reqEditors ...RequestEditorFn) (*AppCallsResponse, error)
+	// StatsDurationWithResponse request
+	StatsDurationWithResponse(ctx context.Context, params *StatsDurationParams, reqEditors ...RequestEditorFn) (*StatsDurationResponse, error)
 
-	// AppDurationWithResponse request
-	AppDurationWithResponse(ctx context.Context, id int64, params *AppDurationParams, reqEditors ...RequestEditorFn) (*AppDurationResponse, error)
-
-	// TotalCallsWithResponse request
-	TotalCallsWithResponse(ctx context.Context, params *TotalCallsParams, reqEditors ...RequestEditorFn) (*TotalCallsResponse, error)
+	// StatsCallsWithResponse request
+	StatsCallsWithResponse(ctx context.Context, params *StatsCallsParams, reqEditors ...RequestEditorFn) (*StatsCallsResponse, error)
 }
 
 type ListAppsResponse struct {
@@ -2460,6 +2429,9 @@ type AddAppResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *AppShort
+	JSON400      *Error
+	JSON429      *Error
+	JSON503      *Error
 }
 
 // Status returns HTTPResponse.Status
@@ -2482,6 +2454,7 @@ type GetAppIdByNameResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *int64
+	JSON400      *Error
 }
 
 // Status returns HTTPResponse.Status
@@ -2525,6 +2498,7 @@ type GetAppResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *App
+	JSON400      *Error
 }
 
 // Status returns HTTPResponse.Status
@@ -2569,6 +2543,8 @@ type UpdateAppResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *AppShort
+	JSON400      *Error
+	JSON503      *Error
 }
 
 // Status returns HTTPResponse.Status
@@ -2587,24 +2563,24 @@ func (r UpdateAppResponse) StatusCode() int {
 	return 0
 }
 
-type GetV1AppsIdLogsResponse struct {
+type ListLogsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *struct {
-		// CurrentPage Current page number
-		CurrentPage *int   `json:"current_page,omitempty"`
-		Logs        *[]Log `json:"logs,omitempty"`
+		Logs *[]Log `json:"logs,omitempty"`
 
-		// PageSize Number of logs per page
-		PageSize *int `json:"page_size,omitempty"`
+		// Offset Current request offset
+		Offset *int32 `json:"offset,omitempty"`
 
-		// TotalPages Total number of pages
-		TotalPages *int `json:"total_pages,omitempty"`
+		// TotalCount Number of total logs available
+		TotalCount *int32 `json:"total_count,omitempty"`
 	}
+	JSON400 *Error
+	JSON503 *Error
 }
 
 // Status returns HTTPResponse.Status
-func (r GetV1AppsIdLogsResponse) Status() string {
+func (r ListLogsResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -2612,7 +2588,7 @@ func (r GetV1AppsIdLogsResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r GetV1AppsIdLogsResponse) StatusCode() int {
+func (r ListLogsResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -2646,7 +2622,10 @@ func (r ListBinariesResponse) StatusCode() int {
 type StoreBinaryResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *int64
+	JSON200      *BinaryShort
+	JSON400      *Error
+	JSON429      *Error
+	JSON503      *Error
 }
 
 // Status returns HTTPResponse.Status
@@ -2668,6 +2647,8 @@ func (r StoreBinaryResponse) StatusCode() int {
 type DelBinaryResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	JSON400      *Error
+	JSON503      *Error
 }
 
 // Status returns HTTPResponse.Status
@@ -2690,6 +2671,7 @@ type GetBinaryResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *Binary
+	JSON400      *Error
 }
 
 // Status returns HTTPResponse.Status
@@ -2712,6 +2694,7 @@ type GetBinaryMetadataResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *BinaryMetadata
+	JSON400      *Error
 }
 
 // Status returns HTTPResponse.Status
@@ -2733,6 +2716,8 @@ func (r GetBinaryMetadataResponse) StatusCode() int {
 type UpdateBinaryMetadataResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	JSON400      *Error
+	JSON503      *Error
 }
 
 // Status returns HTTPResponse.Status
@@ -2778,7 +2763,7 @@ func (r ListGroupsResponse) StatusCode() int {
 type AddGroupResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *int64
+	JSON200      *GroupShort
 }
 
 // Status returns HTTPResponse.Status
@@ -2822,6 +2807,7 @@ type GetGroupResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *Group
+	JSON400      *Error
 }
 
 // Status returns HTTPResponse.Status
@@ -2843,6 +2829,7 @@ func (r GetGroupResponse) StatusCode() int {
 type UpdateGroupResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	JSON200      *GroupShort
 }
 
 // Status returns HTTPResponse.Status
@@ -2864,6 +2851,7 @@ func (r UpdateGroupResponse) StatusCode() int {
 type LeaveGroupResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	JSON400      *Error
 }
 
 // Status returns HTTPResponse.Status
@@ -2885,6 +2873,8 @@ func (r LeaveGroupResponse) StatusCode() int {
 type AddToGroupResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	JSON400      *Error
+	JSON429      *Error
 }
 
 // Status returns HTTPResponse.Status
@@ -2906,6 +2896,7 @@ func (r AddToGroupResponse) StatusCode() int {
 type DelFromGroupResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	JSON400      *Error
 }
 
 // Status returns HTTPResponse.Status
@@ -2928,6 +2919,7 @@ type GetClientMeResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *Client
+	JSON400      *Error
 }
 
 // Status returns HTTPResponse.Status
@@ -2946,31 +2938,7 @@ func (r GetClientMeResponse) StatusCode() int {
 	return 0
 }
 
-type AppCallsResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *struct {
-		Stats []CallStats `json:"stats"`
-	}
-}
-
-// Status returns HTTPResponse.Status
-func (r AppCallsResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r AppCallsResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type AppDurationResponse struct {
+type StatsDurationResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *struct {
@@ -2979,7 +2947,7 @@ type AppDurationResponse struct {
 }
 
 // Status returns HTTPResponse.Status
-func (r AppDurationResponse) Status() string {
+func (r StatsDurationResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -2987,14 +2955,14 @@ func (r AppDurationResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r AppDurationResponse) StatusCode() int {
+func (r StatsDurationResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type TotalCallsResponse struct {
+type StatsCallsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *struct {
@@ -3003,7 +2971,7 @@ type TotalCallsResponse struct {
 }
 
 // Status returns HTTPResponse.Status
-func (r TotalCallsResponse) Status() string {
+func (r StatsCallsResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -3011,7 +2979,7 @@ func (r TotalCallsResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r TotalCallsResponse) StatusCode() int {
+func (r StatsCallsResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -3019,8 +2987,8 @@ func (r TotalCallsResponse) StatusCode() int {
 }
 
 // ListAppsWithResponse request returning *ListAppsResponse
-func (c *ClientWithResponses) ListAppsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListAppsResponse, error) {
-	rsp, err := c.ListApps(ctx, reqEditors...)
+func (c *ClientWithResponses) ListAppsWithResponse(ctx context.Context, params *ListAppsParams, reqEditors ...RequestEditorFn) (*ListAppsResponse, error) {
+	rsp, err := c.ListApps(ctx, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -3105,13 +3073,13 @@ func (c *ClientWithResponses) UpdateAppWithResponse(ctx context.Context, id int6
 	return ParseUpdateAppResponse(rsp)
 }
 
-// GetV1AppsIdLogsWithResponse request returning *GetV1AppsIdLogsResponse
-func (c *ClientWithResponses) GetV1AppsIdLogsWithResponse(ctx context.Context, id int64, params *GetV1AppsIdLogsParams, reqEditors ...RequestEditorFn) (*GetV1AppsIdLogsResponse, error) {
-	rsp, err := c.GetV1AppsIdLogs(ctx, id, params, reqEditors...)
+// ListLogsWithResponse request returning *ListLogsResponse
+func (c *ClientWithResponses) ListLogsWithResponse(ctx context.Context, id int64, params *ListLogsParams, reqEditors ...RequestEditorFn) (*ListLogsResponse, error) {
+	rsp, err := c.ListLogs(ctx, id, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseGetV1AppsIdLogsResponse(rsp)
+	return ParseListLogsResponse(rsp)
 }
 
 // ListBinariesWithResponse request returning *ListBinariesResponse
@@ -3264,8 +3232,8 @@ func (c *ClientWithResponses) AddToGroupWithResponse(ctx context.Context, id int
 }
 
 // DelFromGroupWithResponse request returning *DelFromGroupResponse
-func (c *ClientWithResponses) DelFromGroupWithResponse(ctx context.Context, id int64, memberId int64, reqEditors ...RequestEditorFn) (*DelFromGroupResponse, error) {
-	rsp, err := c.DelFromGroup(ctx, id, memberId, reqEditors...)
+func (c *ClientWithResponses) DelFromGroupWithResponse(ctx context.Context, id int64, clientId int64, reqEditors ...RequestEditorFn) (*DelFromGroupResponse, error) {
+	rsp, err := c.DelFromGroup(ctx, id, clientId, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -3281,31 +3249,22 @@ func (c *ClientWithResponses) GetClientMeWithResponse(ctx context.Context, reqEd
 	return ParseGetClientMeResponse(rsp)
 }
 
-// AppCallsWithResponse request returning *AppCallsResponse
-func (c *ClientWithResponses) AppCallsWithResponse(ctx context.Context, id int64, params *AppCallsParams, reqEditors ...RequestEditorFn) (*AppCallsResponse, error) {
-	rsp, err := c.AppCalls(ctx, id, params, reqEditors...)
+// StatsDurationWithResponse request returning *StatsDurationResponse
+func (c *ClientWithResponses) StatsDurationWithResponse(ctx context.Context, params *StatsDurationParams, reqEditors ...RequestEditorFn) (*StatsDurationResponse, error) {
+	rsp, err := c.StatsDuration(ctx, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseAppCallsResponse(rsp)
+	return ParseStatsDurationResponse(rsp)
 }
 
-// AppDurationWithResponse request returning *AppDurationResponse
-func (c *ClientWithResponses) AppDurationWithResponse(ctx context.Context, id int64, params *AppDurationParams, reqEditors ...RequestEditorFn) (*AppDurationResponse, error) {
-	rsp, err := c.AppDuration(ctx, id, params, reqEditors...)
+// StatsCallsWithResponse request returning *StatsCallsResponse
+func (c *ClientWithResponses) StatsCallsWithResponse(ctx context.Context, params *StatsCallsParams, reqEditors ...RequestEditorFn) (*StatsCallsResponse, error) {
+	rsp, err := c.StatsCalls(ctx, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseAppDurationResponse(rsp)
-}
-
-// TotalCallsWithResponse request returning *TotalCallsResponse
-func (c *ClientWithResponses) TotalCallsWithResponse(ctx context.Context, params *TotalCallsParams, reqEditors ...RequestEditorFn) (*TotalCallsResponse, error) {
-	rsp, err := c.TotalCalls(ctx, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseTotalCallsResponse(rsp)
+	return ParseStatsCallsResponse(rsp)
 }
 
 // ParseListAppsResponse parses an HTTP response from a ListAppsWithResponse call
@@ -3357,6 +3316,27 @@ func ParseAddAppResponse(rsp *http.Response) (*AddAppResponse, error) {
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
 	}
 
 	return response, nil
@@ -3382,6 +3362,13 @@ func ParseGetAppIdByNameResponse(rsp *http.Response) (*GetAppIdByNameResponse, e
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
 
 	}
 
@@ -3424,6 +3411,13 @@ func ParseGetAppResponse(rsp *http.Response) (*GetAppResponse, error) {
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
 
 	}
 
@@ -3477,20 +3471,34 @@ func ParseUpdateAppResponse(rsp *http.Response) (*UpdateAppResponse, error) {
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
 	}
 
 	return response, nil
 }
 
-// ParseGetV1AppsIdLogsResponse parses an HTTP response from a GetV1AppsIdLogsWithResponse call
-func ParseGetV1AppsIdLogsResponse(rsp *http.Response) (*GetV1AppsIdLogsResponse, error) {
+// ParseListLogsResponse parses an HTTP response from a ListLogsWithResponse call
+func ParseListLogsResponse(rsp *http.Response) (*ListLogsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &GetV1AppsIdLogsResponse{
+	response := &ListLogsResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -3498,20 +3506,32 @@ func ParseGetV1AppsIdLogsResponse(rsp *http.Response) (*GetV1AppsIdLogsResponse,
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
-			// CurrentPage Current page number
-			CurrentPage *int   `json:"current_page,omitempty"`
-			Logs        *[]Log `json:"logs,omitempty"`
+			Logs *[]Log `json:"logs,omitempty"`
 
-			// PageSize Number of logs per page
-			PageSize *int `json:"page_size,omitempty"`
+			// Offset Current request offset
+			Offset *int32 `json:"offset,omitempty"`
 
-			// TotalPages Total number of pages
-			TotalPages *int `json:"total_pages,omitempty"`
+			// TotalCount Number of total logs available
+			TotalCount *int32 `json:"total_count,omitempty"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
 
 	}
 
@@ -3561,11 +3581,32 @@ func ParseStoreBinaryResponse(rsp *http.Response) (*StoreBinaryResponse, error) 
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest int64
+		var dest BinaryShort
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
 
 	}
 
@@ -3583,6 +3624,23 @@ func ParseDelBinaryResponse(rsp *http.Response) (*DelBinaryResponse, error) {
 	response := &DelBinaryResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
 	}
 
 	return response, nil
@@ -3608,6 +3666,13 @@ func ParseGetBinaryResponse(rsp *http.Response) (*GetBinaryResponse, error) {
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
 
 	}
 
@@ -3635,6 +3700,13 @@ func ParseGetBinaryMetadataResponse(rsp *http.Response) (*GetBinaryMetadataRespo
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	}
 
 	return response, nil
@@ -3651,6 +3723,23 @@ func ParseUpdateBinaryMetadataResponse(rsp *http.Response) (*UpdateBinaryMetadat
 	response := &UpdateBinaryMetadataResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
 	}
 
 	return response, nil
@@ -3699,7 +3788,7 @@ func ParseAddGroupResponse(rsp *http.Response) (*AddGroupResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest int64
+		var dest GroupShort
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -3747,6 +3836,13 @@ func ParseGetGroupResponse(rsp *http.Response) (*GetGroupResponse, error) {
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	}
 
 	return response, nil
@@ -3765,6 +3861,16 @@ func ParseUpdateGroupResponse(rsp *http.Response) (*UpdateGroupResponse, error) 
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest GroupShort
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
 	return response, nil
 }
 
@@ -3779,6 +3885,16 @@ func ParseLeaveGroupResponse(rsp *http.Response) (*LeaveGroupResponse, error) {
 	response := &LeaveGroupResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	}
 
 	return response, nil
@@ -3797,6 +3913,23 @@ func ParseAddToGroupResponse(rsp *http.Response) (*AddToGroupResponse, error) {
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	}
+
 	return response, nil
 }
 
@@ -3811,6 +3944,16 @@ func ParseDelFromGroupResponse(rsp *http.Response) (*DelFromGroupResponse, error
 	response := &DelFromGroupResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	}
 
 	return response, nil
@@ -3837,48 +3980,27 @@ func ParseGetClientMeResponse(rsp *http.Response) (*GetClientMeResponse, error) 
 		}
 		response.JSON200 = &dest
 
-	}
-
-	return response, nil
-}
-
-// ParseAppCallsResponse parses an HTTP response from a AppCallsWithResponse call
-func ParseAppCallsResponse(rsp *http.Response) (*AppCallsResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &AppCallsResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest struct {
-			Stats []CallStats `json:"stats"`
-		}
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON400 = &dest
 
 	}
 
 	return response, nil
 }
 
-// ParseAppDurationResponse parses an HTTP response from a AppDurationWithResponse call
-func ParseAppDurationResponse(rsp *http.Response) (*AppDurationResponse, error) {
+// ParseStatsDurationResponse parses an HTTP response from a StatsDurationWithResponse call
+func ParseStatsDurationResponse(rsp *http.Response) (*StatsDurationResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &AppDurationResponse{
+	response := &StatsDurationResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -3898,15 +4020,15 @@ func ParseAppDurationResponse(rsp *http.Response) (*AppDurationResponse, error) 
 	return response, nil
 }
 
-// ParseTotalCallsResponse parses an HTTP response from a TotalCallsWithResponse call
-func ParseTotalCallsResponse(rsp *http.Response) (*TotalCallsResponse, error) {
+// ParseStatsCallsResponse parses an HTTP response from a StatsCallsWithResponse call
+func ParseStatsCallsResponse(rsp *http.Response) (*StatsCallsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &TotalCallsResponse{
+	response := &StatsCallsResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -3929,68 +4051,69 @@ func ParseTotalCallsResponse(rsp *http.Response) (*TotalCallsResponse, error) {
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
-	"Mwf5YsCXmy//DQAA//9ehCeUIm4AAA==",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file
