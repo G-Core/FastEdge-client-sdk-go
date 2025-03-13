@@ -89,6 +89,9 @@ components:
           type: integer
           format: int64
           description: Template ID
+        template_name:
+          type: string
+          description: Template name
         status:
           type: integer
           description: 'Status code:<br>0 - draft (inactive)<br>1 - enabled<br>2 - disabled<br>3 - hourly call limit exceeded<br>4 - daily call limit exceeded<br>5 - suspended'
@@ -144,10 +147,7 @@ components:
           type: object
           description: Application secrets
           additionalProperties:
-            type: string
-          example:
-            var1: secretName1
-            var2: secretName2
+            $ref: '#/components/schemas/app_secret_short'
     binary_short:
       required:
       - id
@@ -174,6 +174,7 @@ components:
       - status
       - source
       - api_type
+      - checksum
       type: object
       properties:
         id:
@@ -186,15 +187,15 @@ components:
         source:
           type: integer
           description: 'Source language:<br>0 - unknown<br>1 - Rust<br>2 - JavaScript'
-        errors:
-          type: string
-          description: Compilation errors
         unref_since:
           type: string
           description: Not used since (UTC)
         api_type:
           type: string
           description: Wasm API type
+        checksum:
+          type: string
+          description: MD5 hash of the binary
     template_short:
       type: object
       required:
@@ -394,33 +395,77 @@ components:
     secret_short:
       type: object
       properties:
+        id:
+          type: integer
+          format: int64
+          description: "The unique identifier of the secret."
         name:
           type: string
           description: "The unique name of the secret."
+        comment:
+          type: string
+          nullable: true
+          description: "A description or comment about the secret."
       required:
         - name
-        - effective_from
-    secret:
+    app_secret_short:
       type: object
+      description: Application secret short description
       properties:
+        id:
+          type: integer
+          format: int64
+          description: "The unique identifier of the secret."
         name:
           type: string
+          readOnly: true
           description: "The unique name of the secret."
+        comment:
+          type: string
+          nullable: true
+          readOnly: true
+          description: "A description or comment about the secret."
+    secret_slot:
+      type: object
+      properties:
+        slot:
+          type: integer
+          format: int64
+          description: "The UNIX timestamp when the secret value becomes effective."
         value:
           type: string
           description: "The value of the secret."
-        effective_from:
+          writeOnly: true
+        checksum:
+          type: string
+          description: "A checksum of the secret value for integrity verification."
+          readOnly: true
+      required:
+        - slot
+        - value
+    secret:
+      type: object
+      properties:
+        id:
           type: integer
-          format: int32
-          description: "The UNIX timestamp when the secret becomes effective."
-          nullable: true
+          format: int64
+          description: "The unique identifier of the secret."
+          readOnly: true
+        name:
+          type: string
+          description: "The unique name of the secret."
         comment:
-          description: Description of the secret
           type: string
           nullable: true
+          description: "A description or comment about the secret."
+        secret_slots:
+          type: array
+          nullable: true
+          description: "A list of secret slots associated with this secret."
+          items:
+            $ref: "#/components/schemas/secret_slot"
       required:
         - name
-        - value
     log:
       type: object
       properties:

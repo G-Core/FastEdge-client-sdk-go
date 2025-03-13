@@ -455,7 +455,7 @@ paths:
                                     - binaries
                                 type: object
                     description: Ok
-            summary: List binaries/templates
+            summary: List binaries
             tags:
                 - Binaries
     /v1/binaries/{id}:
@@ -577,6 +577,18 @@ paths:
     /v1/secrets:
         get:
             operationId: listSecrets
+            parameters:
+                - description: App ID
+                  in: query
+                  name: app_id
+                  schema:
+                    format: int64
+                    type: integer
+                - description: Secret name
+                  in: query
+                  name: secret_name
+                  schema:
+                    type: string
             responses:
                 200:
                     content:
@@ -628,23 +640,22 @@ paths:
             tags:
                 - Secrets
             x-codegen-request-body-name: secret
-    /v1/secrets/{name}:
+    /v1/secrets/{id}:
         delete:
             operationId: deleteSecret
             parameters:
-                - description: Name of the secret
+                - description: Id of the secret
                   in: path
-                  name: name
+                  name: id
                   required: true
                   schema:
-                    type: string
-                - description: Effective from timestamp (optional). If not provided, the secret with a zero value for `effective_from` will be deleted.
-                  in: query
-                  name: effective_from
-                  required: false
-                  schema:
-                    format: int32
+                    format: int64
                     type: integer
+                - description: Force delete secret even if it is used in slots
+                  in: query
+                  name: force
+                  schema:
+                    type: boolean
             responses:
                 204:
                     description: Ok
@@ -664,58 +675,55 @@ paths:
             tags:
                 - Secrets
         get:
-            operationId: listSecret
+            operationId: getSecret
             parameters:
-                - description: Name of the secret
+                - description: Id of the secret
                   in: path
-                  name: name
+                  name: id
                   required: true
                   schema:
-                    type: string
+                    format: int64
+                    type: integer
             responses:
                 200:
                     content:
                         application/json:
                             schema:
                                 properties:
-                                    secrets:
-                                        items:
-                                            $ref: ./schemas.yml#/components/schemas/secret
-                                        type: array
+                                    secret:
+                                        $ref: ./schemas.yml#/components/schemas/secret
                                 required:
                                     - secrets
                                 type: object
                     description: Ok
                 404:
                     description: Not found
-            summary: List secret by name
+            summary: Get secret by id
             tags:
                 - Secrets
         put:
+            description: Update a secret without updating the slots. Use this endpoint only to update secret comment or name.
             operationId: updateSecret
             parameters:
-                - description: Name of the secret
+                - description: Id of the secret
                   in: path
-                  name: name
+                  name: id
                   required: true
                   schema:
-                    type: string
-                - description: Effective from timestamp (optional). If not provided, the secret with a zero value for `effective_from` will be updated.
-                  in: query
-                  name: effective_from
-                  required: false
-                  schema:
-                    format: int32
                     type: integer
             requestBody:
                 content:
                     application/json:
                         schema:
-                            $ref: ./schemas.yml#/components/schemas/secret
-                description: Secret details
+                            $ref: ./schemas.yml#/components/schemas/secret_short
+                description: Secret detadils
                 required: true
             responses:
                 200:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: ./schemas.yml#/components/schemas/secret_short
                     description: Ok
                 400:
                     content:
@@ -733,6 +741,139 @@ paths:
             tags:
                 - Secrets
             x-codegen-request-body-name: secret
+    /v1/secrets/{secret_id}/slots:
+        post:
+            operationId: addSecretSlot
+            parameters:
+                - description: ID of the secret to which the slot belongs
+                  in: path
+                  name: secret_id
+                  required: true
+                  schema:
+                    format: int64
+                    type: integer
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: ./schemas.yml#/components/schemas/secret_slot
+                required: true
+            responses:
+                200:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: ./schemas.yml#/components/schemas/secret_slot
+                    description: Secret slot added successfully
+                400:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: ./schemas.yml#/components/schemas/error
+                    description: Bad request
+                404:
+                    description: Not found
+                503:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: ./schemas.yml#/components/schemas/error
+                    description: Service unavailable
+            summary: Add a new secret slot
+            tags:
+                - Secrets
+    /v1/secrets/{secret_id}/slots/{slot}:
+        delete:
+            operationId: deleteSecretSlot
+            parameters:
+                - description: ID of the secret to which the slot belongs
+                  in: path
+                  name: secret_id
+                  required: true
+                  schema:
+                    format: int64
+                    type: integer
+                - description: Value of secret slot
+                  in: path
+                  name: slot
+                  required: true
+                  schema:
+                    format: int64
+                    type: integer
+            responses:
+                204:
+                    description: Secret slot deleted successfully
+                400:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: ./schemas.yml#/components/schemas/error
+                    description: Bad request
+                404:
+                    description: Secret slot not found
+                503:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: ./schemas.yml#/components/schemas/error
+                    description: Service unavailable
+            summary: Delete a secret slot
+            tags:
+                - Secrets
+        put:
+            operationId: updateSecretSlot
+            parameters:
+                - description: ID of the secret to which the slot belongs
+                  in: path
+                  name: secret_id
+                  required: true
+                  schema:
+                    format: int64
+                    type: integer
+                - description: Value of secret slot
+                  in: path
+                  name: slot
+                  required: true
+                  schema:
+                    format: int64
+                    type: integer
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: ./schemas.yml#/components/schemas/secret_slot
+                required: true
+            responses:
+                200:
+                    content:
+                        application/json:
+                            schema:
+                                properties:
+                                    checksum:
+                                        description: Checksum of the secret slot
+                                        type: string
+                                    slot:
+                                        description: Value of secret slot
+                                        format: int64
+                                        type: integer
+                    description: Secret slot updated successfully
+                400:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: ./schemas.yml#/components/schemas/error
+                    description: Bad request
+                404:
+                    description: Secret slot not found
+                503:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: ./schemas.yml#/components/schemas/error
+                    description: Service unavailable
+            summary: Update a secret slot
+            tags:
+                - Secrets
     /v1/stats/app_duration:
         get:
             operationId: StatsDuration

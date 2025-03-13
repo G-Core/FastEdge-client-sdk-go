@@ -60,7 +60,7 @@ type App struct {
 	RspHeaders *map[string]string `json:"rsp_headers,omitempty"`
 
 	// Secrets Application secrets
-	Secrets *map[string]string `json:"secrets,omitempty"`
+	Secrets *map[string]AppSecretShort `json:"secrets,omitempty"`
 
 	// Status Status code:<br>0 - draft (inactive)<br>1 - enabled<br>2 - disabled<br>3 - hourly call limit exceeded<br>4 - daily call limit exceeded<br>5 - suspended
 	Status *int `json:"status,omitempty"`
@@ -68,12 +68,27 @@ type App struct {
 	// Template Template ID
 	Template *int64 `json:"template,omitempty"`
 
+	// TemplateName Template name
+	TemplateName *string `json:"template_name,omitempty"`
+
 	// Url App URL
 	Url *string `json:"url,omitempty"`
 }
 
 // AppLog Logging channel (by default - kafka, which allows exploring logs with API)
 type AppLog string
+
+// AppSecretShort Application secret short description
+type AppSecretShort struct {
+	// Comment A description or comment about the secret.
+	Comment *string `json:"comment"`
+
+	// Id The unique identifier of the secret.
+	Id *int64 `json:"id,omitempty"`
+
+	// Name The unique name of the secret.
+	Name *string `json:"name,omitempty"`
+}
 
 // AppShort defines model for app_short.
 type AppShort struct {
@@ -134,8 +149,8 @@ type Binary struct {
 	// ApiType Wasm API type
 	ApiType string `json:"api_type"`
 
-	// Errors Compilation errors
-	Errors *string `json:"errors,omitempty"`
+	// Checksum MD5 hash of the binary
+	Checksum string `json:"checksum"`
 
 	// Id Binary ID
 	Id int64 `json:"id"`
@@ -375,23 +390,41 @@ type PrebillingResponse = []PrebillingObject
 
 // Secret defines model for secret.
 type Secret struct {
-	// Comment Description of the secret
+	// Comment A description or comment about the secret.
 	Comment *string `json:"comment"`
 
-	// EffectiveFrom The UNIX timestamp when the secret becomes effective.
-	EffectiveFrom *int32 `json:"effective_from"`
+	// Id The unique identifier of the secret.
+	Id *int64 `json:"id,omitempty"`
 
 	// Name The unique name of the secret.
 	Name string `json:"name"`
 
-	// Value The value of the secret.
-	Value string `json:"value"`
+	// SecretSlots A list of secret slots associated with this secret.
+	SecretSlots *[]SecretSlot `json:"secret_slots"`
 }
 
 // SecretShort defines model for secret_short.
 type SecretShort struct {
+	// Comment A description or comment about the secret.
+	Comment *string `json:"comment"`
+
+	// Id The unique identifier of the secret.
+	Id *int64 `json:"id,omitempty"`
+
 	// Name The unique name of the secret.
 	Name string `json:"name"`
+}
+
+// SecretSlot defines model for secret_slot.
+type SecretSlot struct {
+	// Checksum A checksum of the secret value for integrity verification.
+	Checksum *string `json:"checksum,omitempty"`
+
+	// Slot The UNIX timestamp when the secret value becomes effective.
+	Slot int64 `json:"slot"`
+
+	// Value The value of the secret.
+	Value *string `json:"value,omitempty"`
 }
 
 // Template defines model for template.
