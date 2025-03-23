@@ -32,7 +32,7 @@ type App struct {
 	// Binary Binary ID
 	Binary *int64 `json:"binary,omitempty"`
 
-	// Comment Description of the binary
+	// Comment App description
 	Comment *string `json:"comment,omitempty"`
 
 	// Debug Switch on logging for 30 minutes (switched off by default)
@@ -84,7 +84,7 @@ type AppSecretShort struct {
 	Comment *string `json:"comment"`
 
 	// Id The unique identifier of the secret.
-	Id *int64 `json:"id,omitempty"`
+	Id int64 `json:"id"`
 
 	// Name The unique name of the secret.
 	Name *string `json:"name,omitempty"`
@@ -125,6 +125,9 @@ type AppShort struct {
 	// Template Template ID
 	Template *int64 `json:"template,omitempty"`
 
+	// TemplateName Template name
+	TemplateName *string `json:"template_name,omitempty"`
+
 	// UpgradeableTo ID of the binary the app can be upgraded to
 	UpgradeableTo *int64 `json:"upgradeable_to,omitempty"`
 
@@ -150,7 +153,7 @@ type Binary struct {
 	ApiType string `json:"api_type"`
 
 	// Checksum MD5 hash of the binary
-	Checksum string `json:"checksum"`
+	Checksum *string `json:"checksum,omitempty"`
 
 	// Id Binary ID
 	Id int64 `json:"id"`
@@ -169,6 +172,9 @@ type Binary struct {
 type BinaryShort struct {
 	// ApiType Wasm API type
 	ApiType string `json:"api_type"`
+
+	// Checksum MD5 hash of the binary
+	Checksum *string `json:"checksum,omitempty"`
 
 	// Id Binary ID
 	Id int64 `json:"id"`
@@ -229,6 +235,15 @@ type ClientUpdate struct {
 
 	// Plan Plan name
 	Plan string `json:"plan"`
+}
+
+// ConflictError defines model for conflictError.
+type ConflictError struct {
+	// ConflictingIds List of conflicting entity IDs
+	ConflictingIds []int64 `json:"conflicting_ids"`
+
+	// Error Error message
+	Error string `json:"error"`
 }
 
 // CountByStatus defines model for count_by_status.
@@ -390,6 +405,9 @@ type PrebillingResponse = []PrebillingObject
 
 // Secret defines model for secret.
 type Secret struct {
+	// AppCount The number of applications that use this secret.
+	AppCount *int `json:"app_count,omitempty"`
+
 	// Comment A description or comment about the secret.
 	Comment *string `json:"comment"`
 
@@ -405,6 +423,9 @@ type Secret struct {
 
 // SecretShort defines model for secret_short.
 type SecretShort struct {
+	// AppCount The number of applications that use this secret.
+	AppCount *int `json:"app_count,omitempty"`
+
 	// Comment A description or comment about the secret.
 	Comment *string `json:"comment"`
 
