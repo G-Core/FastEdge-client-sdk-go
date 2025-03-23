@@ -59,6 +59,9 @@ components:
           type: integer
           format: int64
           description: Template ID
+        template_name:
+          type: string
+          description: Template name
         networks:
           description: Networks
           type: array
@@ -90,6 +93,7 @@ components:
           format: int64
           description: Template ID
         template_name:
+          readOnly: true
           type: string
           description: Template name
         status:
@@ -132,7 +136,7 @@ components:
           description: When debugging finishes
         comment:
           type: string
-          description: Description of the binary
+          description: App description
         api_type:
           readOnly: true
           type: string
@@ -168,13 +172,15 @@ components:
         api_type:
           type: string
           description: Wasm API type
+        checksum:
+          type: string
+          description: MD5 hash of the binary
     binary:
       required:
       - id
       - status
       - source
       - api_type
-      - checksum
       type: object
       properties:
         id:
@@ -406,11 +412,18 @@ components:
           type: string
           nullable: true
           description: "A description or comment about the secret."
+        app_count:
+          type: integer
+          format: int
+          description: "The number of applications that use this secret."
+          readOnly: true
       required:
         - name
     app_secret_short:
       type: object
       description: Application secret short description
+      required:
+      - id
       properties:
         id:
           type: integer
@@ -458,6 +471,11 @@ components:
           type: string
           nullable: true
           description: "A description or comment about the secret."
+        app_count:
+          type: integer
+          format: int
+          description: "The number of applications that use this secret."
+          readOnly: true
         secret_slots:
           type: array
           nullable: true
@@ -502,6 +520,21 @@ components:
         error:
           type: string
           description: Error message
+    conflictError:
+      type: object
+      required:
+        - error
+        - conflicting_ids
+      properties:
+          error:
+              type: string
+              description: Error message
+          conflicting_ids:
+              type: array
+              items:
+                  type: integer
+                  format: int64
+              description: List of conflicting entity IDs
     network:
       type: object
       required:
