@@ -2,6 +2,7 @@ package sdk
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"runtime/debug"
 	"strings"
@@ -39,4 +40,41 @@ func AddVersionHeader(ctx context.Context, req *http.Request) error {
 		req.Header.Set(versionHeaderName, ver)
 	}
 	return nil
+}
+
+type versionCheckingHTTPClient struct {
+	client   http.Client
+	toolName string
+}
+
+func (c *versionCheckingHTTPClient) Do(req *http.Request) (*http.Response, error) {
+	ret, err := c.client.Do(req)
+	if ret.StatusCode == http.StatusPreconditionFailed {
+		return nil, fmt.Errorf("API version is not supported by the server, please update your %s", c.toolName)
+	}
+	return ret, err
+}
+
+func NewClientWithVersionCheck(apiUrl, userAgent, toolName string, opts ...ClientOption) (*ClientWithResponses, error) {
+	opts = append(opts,
+		WithHTTPClient(
+			&versionCheckingHTTPClient{
+				client:   http.Client{},
+				toolName: toolName,
+			}),
+		WithRequestEditorFn(func(ctx context.Context, req *http.Request) error {
+			ver := GetVersion()
+			if ver != "" {
+				req.Header.Set(versionHeaderName, ver)
+			}
+			return nil
+		}),
+		WithRequestEditorFn(func(ctx context.Context, req *http.Request) error {
+			if userAgent != "" {
+				req.Header.Set("User-Agent", userAgent)
+			}
+			return nil
+		}),
+	)
+	return NewClientWithResponses(apiUrl, opts...)
 }
