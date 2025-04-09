@@ -137,10 +137,24 @@ type ListSecretsParams struct {
 	SecretName *string `form:"secret_name,omitempty" json:"secret_name,omitempty"`
 }
 
+// AddSecretJSONBody defines parameters for AddSecret.
+type AddSecretJSONBody struct {
+	// Embedded struct due to allOf(./schemas.yml#/components/schemas/secret)
+	Secret `yaml:",inline"`
+	// Embedded fields due to inline allOf schema
+}
+
 // DeleteSecretParams defines parameters for DeleteSecret.
 type DeleteSecretParams struct {
 	// Force Force delete secret even if it is used in slots
 	Force *bool `form:"force,omitempty" json:"force,omitempty"`
+}
+
+// UpdateSecretJSONBody defines parameters for UpdateSecret.
+type UpdateSecretJSONBody struct {
+	// Embedded struct due to allOf(./schemas.yml#/components/schemas/secret)
+	Secret `yaml:",inline"`
+	// Embedded fields due to inline allOf schema
 }
 
 // StatsDurationParams defines parameters for StatsDuration.
@@ -207,16 +221,13 @@ type PatchAppJSONRequestBody = App
 type UpdateAppJSONRequestBody UpdateAppJSONBody
 
 // AddSecretJSONRequestBody defines body for AddSecret for application/json ContentType.
-type AddSecretJSONRequestBody = Secret
+type AddSecretJSONRequestBody AddSecretJSONBody
+
+// PatchSecretJSONRequestBody defines body for PatchSecret for application/json ContentType.
+type PatchSecretJSONRequestBody = Secret
 
 // UpdateSecretJSONRequestBody defines body for UpdateSecret for application/json ContentType.
-type UpdateSecretJSONRequestBody = SecretShort
-
-// AddSecretSlotJSONRequestBody defines body for AddSecretSlot for application/json ContentType.
-type AddSecretSlotJSONRequestBody = SecretSlot
-
-// UpdateSecretSlotJSONRequestBody defines body for UpdateSecretSlot for application/json ContentType.
-type UpdateSecretSlotJSONRequestBody = SecretSlot
+type UpdateSecretJSONRequestBody UpdateSecretJSONBody
 
 // AddTemplateJSONRequestBody defines body for AddTemplate for application/json ContentType.
 type AddTemplateJSONRequestBody = Template
@@ -356,23 +367,15 @@ type ClientInterface interface {
 	// GetSecret request
 	GetSecret(ctx context.Context, id int64, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// PatchSecretWithBody request with any body
+	PatchSecretWithBody(ctx context.Context, id int64, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	PatchSecret(ctx context.Context, id int64, body PatchSecretJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// UpdateSecretWithBody request with any body
-	UpdateSecretWithBody(ctx context.Context, id int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateSecretWithBody(ctx context.Context, id int64, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	UpdateSecret(ctx context.Context, id int, body UpdateSecretJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// AddSecretSlotWithBody request with any body
-	AddSecretSlotWithBody(ctx context.Context, secretId int64, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	AddSecretSlot(ctx context.Context, secretId int64, body AddSecretSlotJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// DeleteSecretSlot request
-	DeleteSecretSlot(ctx context.Context, secretId int64, slot int64, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// UpdateSecretSlotWithBody request with any body
-	UpdateSecretSlotWithBody(ctx context.Context, secretId int64, slot int64, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	UpdateSecretSlot(ctx context.Context, secretId int64, slot int64, body UpdateSecretSlotJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateSecret(ctx context.Context, id int64, body UpdateSecretJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// StatsDuration request
 	StatsDuration(ctx context.Context, params *StatsDurationParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -652,7 +655,31 @@ func (c *ClientSDK) GetSecret(ctx context.Context, id int64, reqEditors ...Reque
 	return c.Client.Do(req)
 }
 
-func (c *ClientSDK) UpdateSecretWithBody(ctx context.Context, id int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *ClientSDK) PatchSecretWithBody(ctx context.Context, id int64, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPatchSecretRequestWithBody(c.Server, id, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *ClientSDK) PatchSecret(ctx context.Context, id int64, body PatchSecretJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPatchSecretRequest(c.Server, id, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *ClientSDK) UpdateSecretWithBody(ctx context.Context, id int64, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpdateSecretRequestWithBody(c.Server, id, contentType, body)
 	if err != nil {
 		return nil, err
@@ -664,68 +691,8 @@ func (c *ClientSDK) UpdateSecretWithBody(ctx context.Context, id int, contentTyp
 	return c.Client.Do(req)
 }
 
-func (c *ClientSDK) UpdateSecret(ctx context.Context, id int, body UpdateSecretJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *ClientSDK) UpdateSecret(ctx context.Context, id int64, body UpdateSecretJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpdateSecretRequest(c.Server, id, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *ClientSDK) AddSecretSlotWithBody(ctx context.Context, secretId int64, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewAddSecretSlotRequestWithBody(c.Server, secretId, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *ClientSDK) AddSecretSlot(ctx context.Context, secretId int64, body AddSecretSlotJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewAddSecretSlotRequest(c.Server, secretId, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *ClientSDK) DeleteSecretSlot(ctx context.Context, secretId int64, slot int64, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteSecretSlotRequest(c.Server, secretId, slot)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *ClientSDK) UpdateSecretSlotWithBody(ctx context.Context, secretId int64, slot int64, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateSecretSlotRequestWithBody(c.Server, secretId, slot, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *ClientSDK) UpdateSecretSlot(ctx context.Context, secretId int64, slot int64, body UpdateSecretSlotJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateSecretSlotRequest(c.Server, secretId, slot, body)
 	if err != nil {
 		return nil, err
 	}
@@ -1771,19 +1738,19 @@ func NewGetSecretRequest(server string, id int64) (*http.Request, error) {
 	return req, nil
 }
 
-// NewUpdateSecretRequest calls the generic UpdateSecret builder with application/json body
-func NewUpdateSecretRequest(server string, id int, body UpdateSecretJSONRequestBody) (*http.Request, error) {
+// NewPatchSecretRequest calls the generic PatchSecret builder with application/json body
+func NewPatchSecretRequest(server string, id int64, body PatchSecretJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewUpdateSecretRequestWithBody(server, id, "application/json", bodyReader)
+	return NewPatchSecretRequestWithBody(server, id, "application/json", bodyReader)
 }
 
-// NewUpdateSecretRequestWithBody generates requests for UpdateSecret with any type of body
-func NewUpdateSecretRequestWithBody(server string, id int, contentType string, body io.Reader) (*http.Request, error) {
+// NewPatchSecretRequestWithBody generates requests for PatchSecret with any type of body
+func NewPatchSecretRequestWithBody(server string, id int64, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -1808,7 +1775,7 @@ func NewUpdateSecretRequestWithBody(server string, id int, contentType string, b
 		return nil, err
 	}
 
-	req, err := http.NewRequest("PUT", queryURL.String(), body)
+	req, err := http.NewRequest("PATCH", queryURL.String(), body)
 	if err != nil {
 		return nil, err
 	}
@@ -1818,24 +1785,24 @@ func NewUpdateSecretRequestWithBody(server string, id int, contentType string, b
 	return req, nil
 }
 
-// NewAddSecretSlotRequest calls the generic AddSecretSlot builder with application/json body
-func NewAddSecretSlotRequest(server string, secretId int64, body AddSecretSlotJSONRequestBody) (*http.Request, error) {
+// NewUpdateSecretRequest calls the generic UpdateSecret builder with application/json body
+func NewUpdateSecretRequest(server string, id int64, body UpdateSecretJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewAddSecretSlotRequestWithBody(server, secretId, "application/json", bodyReader)
+	return NewUpdateSecretRequestWithBody(server, id, "application/json", bodyReader)
 }
 
-// NewAddSecretSlotRequestWithBody generates requests for AddSecretSlot with any type of body
-func NewAddSecretSlotRequestWithBody(server string, secretId int64, contentType string, body io.Reader) (*http.Request, error) {
+// NewUpdateSecretRequestWithBody generates requests for UpdateSecret with any type of body
+func NewUpdateSecretRequestWithBody(server string, id int64, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
 
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "secret_id", runtime.ParamLocationPath, secretId)
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
 	if err != nil {
 		return nil, err
 	}
@@ -1845,102 +1812,7 @@ func NewAddSecretSlotRequestWithBody(server string, secretId int64, contentType 
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/secrets/%s/slots", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	return req, nil
-}
-
-// NewDeleteSecretSlotRequest generates requests for DeleteSecretSlot
-func NewDeleteSecretSlotRequest(server string, secretId int64, slot int64) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "secret_id", runtime.ParamLocationPath, secretId)
-	if err != nil {
-		return nil, err
-	}
-
-	var pathParam1 string
-
-	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "slot", runtime.ParamLocationPath, slot)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/v1/secrets/%s/slots/%s", pathParam0, pathParam1)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewUpdateSecretSlotRequest calls the generic UpdateSecretSlot builder with application/json body
-func NewUpdateSecretSlotRequest(server string, secretId int64, slot int64, body UpdateSecretSlotJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewUpdateSecretSlotRequestWithBody(server, secretId, slot, "application/json", bodyReader)
-}
-
-// NewUpdateSecretSlotRequestWithBody generates requests for UpdateSecretSlot with any type of body
-func NewUpdateSecretSlotRequestWithBody(server string, secretId int64, slot int64, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "secret_id", runtime.ParamLocationPath, secretId)
-	if err != nil {
-		return nil, err
-	}
-
-	var pathParam1 string
-
-	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "slot", runtime.ParamLocationPath, slot)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/v1/secrets/%s/slots/%s", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/v1/secrets/%s", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -2516,23 +2388,15 @@ type ClientWithResponsesInterface interface {
 	// GetSecretWithResponse request
 	GetSecretWithResponse(ctx context.Context, id int64, reqEditors ...RequestEditorFn) (*GetSecretResponse, error)
 
+	// PatchSecretWithBodyWithResponse request with any body
+	PatchSecretWithBodyWithResponse(ctx context.Context, id int64, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PatchSecretResponse, error)
+
+	PatchSecretWithResponse(ctx context.Context, id int64, body PatchSecretJSONRequestBody, reqEditors ...RequestEditorFn) (*PatchSecretResponse, error)
+
 	// UpdateSecretWithBodyWithResponse request with any body
-	UpdateSecretWithBodyWithResponse(ctx context.Context, id int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateSecretResponse, error)
+	UpdateSecretWithBodyWithResponse(ctx context.Context, id int64, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateSecretResponse, error)
 
-	UpdateSecretWithResponse(ctx context.Context, id int, body UpdateSecretJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateSecretResponse, error)
-
-	// AddSecretSlotWithBodyWithResponse request with any body
-	AddSecretSlotWithBodyWithResponse(ctx context.Context, secretId int64, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AddSecretSlotResponse, error)
-
-	AddSecretSlotWithResponse(ctx context.Context, secretId int64, body AddSecretSlotJSONRequestBody, reqEditors ...RequestEditorFn) (*AddSecretSlotResponse, error)
-
-	// DeleteSecretSlotWithResponse request
-	DeleteSecretSlotWithResponse(ctx context.Context, secretId int64, slot int64, reqEditors ...RequestEditorFn) (*DeleteSecretSlotResponse, error)
-
-	// UpdateSecretSlotWithBodyWithResponse request with any body
-	UpdateSecretSlotWithBodyWithResponse(ctx context.Context, secretId int64, slot int64, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateSecretSlotResponse, error)
-
-	UpdateSecretSlotWithResponse(ctx context.Context, secretId int64, slot int64, body UpdateSecretSlotJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateSecretSlotResponse, error)
+	UpdateSecretWithResponse(ctx context.Context, id int64, body UpdateSecretJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateSecretResponse, error)
 
 	// StatsDurationWithResponse request
 	StatsDurationWithResponse(ctx context.Context, params *StatsDurationParams, reqEditors ...RequestEditorFn) (*StatsDurationResponse, error)
@@ -2905,9 +2769,15 @@ func (r ListSecretsResponse) StatusCode() int {
 type AddSecretResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *SecretShort
-	JSON400      *Error
-	JSON503      *Error
+	JSON200      *struct {
+		// Embedded struct due to allOf(./schemas.yml#/components/schemas/secret)
+		Secret `yaml:",inline"`
+		// Embedded fields due to inline allOf schema
+		// Id The unique identifier of the secret.
+		Id *int64 `json:"id,omitempty"`
+	}
+	JSON400 *Error
+	JSON503 *Error
 }
 
 // Status returns HTTPResponse.Status
@@ -2930,6 +2800,7 @@ type DeleteSecretResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON400      *Error
+	JSON409      *ConflictError
 	JSON503      *Error
 }
 
@@ -2952,9 +2823,7 @@ func (r DeleteSecretResponse) StatusCode() int {
 type GetSecretResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *struct {
-		Secret *Secret `json:"secret,omitempty"`
-	}
+	JSON200      *Secret
 }
 
 // Status returns HTTPResponse.Status
@@ -2973,11 +2842,37 @@ func (r GetSecretResponse) StatusCode() int {
 	return 0
 }
 
+type PatchSecretResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *Secret
+	JSON400      *Error
+	JSON409      *ConflictError
+	JSON503      *Error
+}
+
+// Status returns HTTPResponse.Status
+func (r PatchSecretResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PatchSecretResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type UpdateSecretResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *SecretShort
+	JSON200      *Secret
 	JSON400      *Error
+	JSON409      *ConflictError
 	JSON503      *Error
 }
 
@@ -2991,83 +2886,6 @@ func (r UpdateSecretResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r UpdateSecretResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type AddSecretSlotResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *SecretSlot
-	JSON400      *Error
-	JSON503      *Error
-}
-
-// Status returns HTTPResponse.Status
-func (r AddSecretSlotResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r AddSecretSlotResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type DeleteSecretSlotResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON400      *Error
-	JSON503      *Error
-}
-
-// Status returns HTTPResponse.Status
-func (r DeleteSecretSlotResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r DeleteSecretSlotResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type UpdateSecretSlotResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *struct {
-		// Checksum Checksum of the secret slot
-		Checksum *string `json:"checksum,omitempty"`
-
-		// Slot Value of secret slot
-		Slot *int64 `json:"slot,omitempty"`
-	}
-	JSON400 *Error
-	JSON503 *Error
-}
-
-// Status returns HTTPResponse.Status
-func (r UpdateSecretSlotResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r UpdateSecretSlotResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -3429,8 +3247,25 @@ func (c *ClientWithResponses) GetSecretWithResponse(ctx context.Context, id int6
 	return ParseGetSecretResponse(rsp)
 }
 
+// PatchSecretWithBodyWithResponse request with arbitrary body returning *PatchSecretResponse
+func (c *ClientWithResponses) PatchSecretWithBodyWithResponse(ctx context.Context, id int64, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PatchSecretResponse, error) {
+	rsp, err := c.PatchSecretWithBody(ctx, id, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePatchSecretResponse(rsp)
+}
+
+func (c *ClientWithResponses) PatchSecretWithResponse(ctx context.Context, id int64, body PatchSecretJSONRequestBody, reqEditors ...RequestEditorFn) (*PatchSecretResponse, error) {
+	rsp, err := c.PatchSecret(ctx, id, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePatchSecretResponse(rsp)
+}
+
 // UpdateSecretWithBodyWithResponse request with arbitrary body returning *UpdateSecretResponse
-func (c *ClientWithResponses) UpdateSecretWithBodyWithResponse(ctx context.Context, id int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateSecretResponse, error) {
+func (c *ClientWithResponses) UpdateSecretWithBodyWithResponse(ctx context.Context, id int64, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateSecretResponse, error) {
 	rsp, err := c.UpdateSecretWithBody(ctx, id, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -3438,55 +3273,12 @@ func (c *ClientWithResponses) UpdateSecretWithBodyWithResponse(ctx context.Conte
 	return ParseUpdateSecretResponse(rsp)
 }
 
-func (c *ClientWithResponses) UpdateSecretWithResponse(ctx context.Context, id int, body UpdateSecretJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateSecretResponse, error) {
+func (c *ClientWithResponses) UpdateSecretWithResponse(ctx context.Context, id int64, body UpdateSecretJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateSecretResponse, error) {
 	rsp, err := c.UpdateSecret(ctx, id, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseUpdateSecretResponse(rsp)
-}
-
-// AddSecretSlotWithBodyWithResponse request with arbitrary body returning *AddSecretSlotResponse
-func (c *ClientWithResponses) AddSecretSlotWithBodyWithResponse(ctx context.Context, secretId int64, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AddSecretSlotResponse, error) {
-	rsp, err := c.AddSecretSlotWithBody(ctx, secretId, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseAddSecretSlotResponse(rsp)
-}
-
-func (c *ClientWithResponses) AddSecretSlotWithResponse(ctx context.Context, secretId int64, body AddSecretSlotJSONRequestBody, reqEditors ...RequestEditorFn) (*AddSecretSlotResponse, error) {
-	rsp, err := c.AddSecretSlot(ctx, secretId, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseAddSecretSlotResponse(rsp)
-}
-
-// DeleteSecretSlotWithResponse request returning *DeleteSecretSlotResponse
-func (c *ClientWithResponses) DeleteSecretSlotWithResponse(ctx context.Context, secretId int64, slot int64, reqEditors ...RequestEditorFn) (*DeleteSecretSlotResponse, error) {
-	rsp, err := c.DeleteSecretSlot(ctx, secretId, slot, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseDeleteSecretSlotResponse(rsp)
-}
-
-// UpdateSecretSlotWithBodyWithResponse request with arbitrary body returning *UpdateSecretSlotResponse
-func (c *ClientWithResponses) UpdateSecretSlotWithBodyWithResponse(ctx context.Context, secretId int64, slot int64, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateSecretSlotResponse, error) {
-	rsp, err := c.UpdateSecretSlotWithBody(ctx, secretId, slot, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseUpdateSecretSlotResponse(rsp)
-}
-
-func (c *ClientWithResponses) UpdateSecretSlotWithResponse(ctx context.Context, secretId int64, slot int64, body UpdateSecretSlotJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateSecretSlotResponse, error) {
-	rsp, err := c.UpdateSecretSlot(ctx, secretId, slot, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseUpdateSecretSlotResponse(rsp)
 }
 
 // StatsDurationWithResponse request returning *StatsDurationResponse
@@ -4083,7 +3875,13 @@ func ParseAddSecretResponse(rsp *http.Response) (*AddSecretResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest SecretShort
+		var dest struct {
+			// Embedded struct due to allOf(./schemas.yml#/components/schemas/secret)
+			Secret `yaml:",inline"`
+			// Embedded fields due to inline allOf schema
+			// Id The unique identifier of the secret.
+			Id *int64 `json:"id,omitempty"`
+		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -4129,6 +3927,13 @@ func ParseDeleteSecretResponse(rsp *http.Response) (*DeleteSecretResponse, error
 		}
 		response.JSON400 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ConflictError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
 		var dest Error
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -4156,13 +3961,58 @@ func ParseGetSecretResponse(rsp *http.Response) (*GetSecretResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest struct {
-			Secret *Secret `json:"secret,omitempty"`
-		}
+		var dest Secret
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePatchSecretResponse parses an HTTP response from a PatchSecretWithResponse call
+func ParsePatchSecretResponse(rsp *http.Response) (*PatchSecretResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PatchSecretResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Secret
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ConflictError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
 
 	}
 
@@ -4184,7 +4034,7 @@ func ParseUpdateSecretResponse(rsp *http.Response) (*UpdateSecretResponse, error
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest SecretShort
+		var dest Secret
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -4197,124 +4047,12 @@ func ParseUpdateSecretResponse(rsp *http.Response) (*UpdateSecretResponse, error
 		}
 		response.JSON400 = &dest
 
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
-		var dest Error
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ConflictError
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON503 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseAddSecretSlotResponse parses an HTTP response from a AddSecretSlotWithResponse call
-func ParseAddSecretSlotResponse(rsp *http.Response) (*AddSecretSlotResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &AddSecretSlotResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest SecretSlot
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest Error
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
-		var dest Error
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON503 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseDeleteSecretSlotResponse parses an HTTP response from a DeleteSecretSlotWithResponse call
-func ParseDeleteSecretSlotResponse(rsp *http.Response) (*DeleteSecretSlotResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &DeleteSecretSlotResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest Error
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
-		var dest Error
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON503 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseUpdateSecretSlotResponse parses an HTTP response from a UpdateSecretSlotWithResponse call
-func ParseUpdateSecretSlotResponse(rsp *http.Response) (*UpdateSecretSlotResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &UpdateSecretSlotResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest struct {
-			// Checksum Checksum of the secret slot
-			Checksum *string `json:"checksum,omitempty"`
-
-			// Slot Value of secret slot
-			Slot *int64 `json:"slot,omitempty"`
-		}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest Error
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
+		response.JSON409 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
 		var dest Error
@@ -4577,81 +4315,79 @@ func ParseUpdateTemplateResponse(rsp *http.Response) (*UpdateTemplateResponse, e
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
-	"/yXCWOauhwAA",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

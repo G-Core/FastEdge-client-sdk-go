@@ -81,7 +81,7 @@ type AppLog string
 // AppSecretShort Application secret short description
 type AppSecretShort struct {
 	// Comment A description or comment about the secret.
-	Comment *string `json:"comment"`
+	Comment *string `json:"comment,omitempty"`
 
 	// Id The unique identifier of the secret.
 	Id int64 `json:"id"`
@@ -409,16 +409,13 @@ type Secret struct {
 	AppCount *int `json:"app_count,omitempty"`
 
 	// Comment A description or comment about the secret.
-	Comment *string `json:"comment"`
-
-	// Id The unique identifier of the secret.
-	Id *int64 `json:"id,omitempty"`
+	Comment *string `json:"comment,omitempty"`
 
 	// Name The unique name of the secret.
-	Name string `json:"name"`
+	Name *string `json:"name,omitempty"`
 
 	// SecretSlots A list of secret slots associated with this secret.
-	SecretSlots *[]SecretSlot `json:"secret_slots"`
+	SecretSlots *[]SecretSlot `json:"secret_slots,omitempty"`
 }
 
 // SecretShort defines model for secret_short.
@@ -427,7 +424,7 @@ type SecretShort struct {
 	AppCount *int `json:"app_count,omitempty"`
 
 	// Comment A description or comment about the secret.
-	Comment *string `json:"comment"`
+	Comment *string `json:"comment,omitempty"`
 
 	// Id The unique identifier of the secret.
 	Id *int64 `json:"id,omitempty"`
@@ -441,7 +438,7 @@ type SecretSlot struct {
 	// Checksum A checksum of the secret value for integrity verification.
 	Checksum *string `json:"checksum,omitempty"`
 
-	// Slot The UNIX timestamp when the secret value becomes effective.
+	// Slot Secret slot ID.
 	Slot int64 `json:"slot"`
 
 	// Value The value of the secret.
