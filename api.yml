@@ -480,6 +480,8 @@ paths:
                     description: Bad request
                 404:
                     description: Not found
+                409:
+                    description: Binary referenced
                 503:
                     content:
                         application/json:
@@ -614,7 +616,11 @@ paths:
                 content:
                     application/json:
                         schema:
-                            $ref: ./schemas.yml#/components/schemas/secret
+                            allOf:
+                                - $ref: ./schemas.yml#/components/schemas/secret
+                                - required:
+                                    - name
+                                  type: object
                 description: Secret details
                 required: true
             responses:
@@ -622,7 +628,14 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: ./schemas.yml#/components/schemas/secret_short
+                                allOf:
+                                    - $ref: ./schemas.yml#/components/schemas/secret
+                                    - properties:
+                                        id:
+                                            description: The unique identifier of the secret.
+                                            format: int64
+                                            type: integer
+                                      type: object
                     description: Ok
                 400:
                     content:
@@ -665,6 +678,14 @@ paths:
                             schema:
                                 $ref: ./schemas.yml#/components/schemas/error
                     description: Bad request
+                404:
+                    description: Not found
+                409:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: ./schemas.yml#/components/schemas/conflictError
+                    description: Entity referenced
                 503:
                     content:
                         application/json:
@@ -689,41 +710,37 @@ paths:
                     content:
                         application/json:
                             schema:
-                                properties:
-                                    secret:
-                                        $ref: ./schemas.yml#/components/schemas/secret
-                                required:
-                                    - secrets
-                                type: object
+                                $ref: ./schemas.yml#/components/schemas/secret
                     description: Ok
                 404:
                     description: Not found
             summary: Get secret by id
             tags:
                 - Secrets
-        put:
-            description: Update a secret without updating the slots. Use this endpoint only to update secret comment or name.
-            operationId: updateSecret
+        patch:
+            description: Update a secret
+            operationId: patchSecret
             parameters:
                 - description: Id of the secret
                   in: path
                   name: id
                   required: true
                   schema:
+                    format: int64
                     type: integer
             requestBody:
                 content:
                     application/json:
                         schema:
-                            $ref: ./schemas.yml#/components/schemas/secret_short
-                description: Secret detadils
+                            $ref: ./schemas.yml#/components/schemas/secret
+                description: Secret details
                 required: true
             responses:
                 200:
                     content:
                         application/json:
                             schema:
-                                $ref: ./schemas.yml#/components/schemas/secret_short
+                                $ref: ./schemas.yml#/components/schemas/secret
                     description: Ok
                 400:
                     content:
@@ -731,6 +748,14 @@ paths:
                             schema:
                                 $ref: ./schemas.yml#/components/schemas/error
                     description: Bad request
+                404:
+                    description: Not found
+                409:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: ./schemas.yml#/components/schemas/conflictError
+                    description: Entity referenced
                 503:
                     content:
                         application/json:
@@ -741,13 +766,13 @@ paths:
             tags:
                 - Secrets
             x-codegen-request-body-name: secret
-    /v1/secrets/{secret_id}/slots:
-        post:
-            operationId: addSecretSlot
+        put:
+            description: Update a secret
+            operationId: updateSecret
             parameters:
-                - description: ID of the secret to which the slot belongs
+                - description: Id of the secret
                   in: path
-                  name: secret_id
+                  name: id
                   required: true
                   schema:
                     format: int64
@@ -756,15 +781,20 @@ paths:
                 content:
                     application/json:
                         schema:
-                            $ref: ./schemas.yml#/components/schemas/secret_slot
+                            allOf:
+                                - $ref: ./schemas.yml#/components/schemas/secret
+                                - required:
+                                    - name
+                                  type: object
+                description: Secret details
                 required: true
             responses:
                 200:
                     content:
                         application/json:
                             schema:
-                                $ref: ./schemas.yml#/components/schemas/secret_slot
-                    description: Secret slot added successfully
+                                $ref: ./schemas.yml#/components/schemas/secret
+                    description: Ok
                 400:
                     content:
                         application/json:
@@ -773,107 +803,22 @@ paths:
                     description: Bad request
                 404:
                     description: Not found
+                409:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: ./schemas.yml#/components/schemas/conflictError
+                    description: Entity referenced
                 503:
                     content:
                         application/json:
                             schema:
                                 $ref: ./schemas.yml#/components/schemas/error
                     description: Service unavailable
-            summary: Add a new secret slot
+            summary: Update a secret
             tags:
                 - Secrets
-    /v1/secrets/{secret_id}/slots/{slot}:
-        delete:
-            operationId: deleteSecretSlot
-            parameters:
-                - description: ID of the secret to which the slot belongs
-                  in: path
-                  name: secret_id
-                  required: true
-                  schema:
-                    format: int64
-                    type: integer
-                - description: Value of secret slot
-                  in: path
-                  name: slot
-                  required: true
-                  schema:
-                    format: int64
-                    type: integer
-            responses:
-                204:
-                    description: Secret slot deleted successfully
-                400:
-                    content:
-                        application/json:
-                            schema:
-                                $ref: ./schemas.yml#/components/schemas/error
-                    description: Bad request
-                404:
-                    description: Secret slot not found
-                503:
-                    content:
-                        application/json:
-                            schema:
-                                $ref: ./schemas.yml#/components/schemas/error
-                    description: Service unavailable
-            summary: Delete a secret slot
-            tags:
-                - Secrets
-        put:
-            operationId: updateSecretSlot
-            parameters:
-                - description: ID of the secret to which the slot belongs
-                  in: path
-                  name: secret_id
-                  required: true
-                  schema:
-                    format: int64
-                    type: integer
-                - description: Value of secret slot
-                  in: path
-                  name: slot
-                  required: true
-                  schema:
-                    format: int64
-                    type: integer
-            requestBody:
-                content:
-                    application/json:
-                        schema:
-                            $ref: ./schemas.yml#/components/schemas/secret_slot
-                required: true
-            responses:
-                200:
-                    content:
-                        application/json:
-                            schema:
-                                properties:
-                                    checksum:
-                                        description: Checksum of the secret slot
-                                        type: string
-                                    slot:
-                                        description: Value of secret slot
-                                        format: int64
-                                        type: integer
-                    description: Secret slot updated successfully
-                400:
-                    content:
-                        application/json:
-                            schema:
-                                $ref: ./schemas.yml#/components/schemas/error
-                    description: Bad request
-                404:
-                    description: Secret slot not found
-                503:
-                    content:
-                        application/json:
-                            schema:
-                                $ref: ./schemas.yml#/components/schemas/error
-                    description: Service unavailable
-            summary: Update a secret slot
-            tags:
-                - Secrets
+            x-codegen-request-body-name: secret
     /v1/stats/app_duration:
         get:
             operationId: StatsDuration

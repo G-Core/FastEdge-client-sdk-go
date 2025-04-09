@@ -90,25 +90,16 @@ func (ClientSDKmock) DeleteSecret(ctx context.Context, id int64, params *DeleteS
 func (ClientSDKmock) GetSecret(ctx context.Context, id int64, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	return nil, notImplemented()
 }
-func (ClientSDKmock) UpdateSecretWithBody(ctx context.Context, id int, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (ClientSDKmock) UpdateSecretWithBody(ctx context.Context, id int64, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	return nil, notImplemented()
 }
-func (ClientSDKmock) UpdateSecret(ctx context.Context, id int, body UpdateSecretJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (ClientSDKmock) UpdateSecret(ctx context.Context, id int64, body UpdateSecretJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	return nil, notImplemented()
 }
-func (ClientSDKmock) AddSecretSlotWithBody(ctx context.Context, secretId int64, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (ClientSDKmock) PatchSecret(ctx context.Context, id int64, body PatchSecretJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	return nil, notImplemented()
 }
-func (ClientSDKmock) AddSecretSlot(ctx context.Context, secretId int64, body AddSecretSlotJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	return nil, notImplemented()
-}
-func (ClientSDKmock) DeleteSecretSlot(ctx context.Context, secretId int64, slot int64, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	return nil, notImplemented()
-}
-func (ClientSDKmock) UpdateSecretSlotWithBody(ctx context.Context, secretId int64, slot int64, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	return nil, notImplemented()
-}
-func (ClientSDKmock) UpdateSecretSlot(ctx context.Context, secretId int64, slot int64, body UpdateSecretSlotJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (ClientSDKmock) PatchSecretWithBody(ctx context.Context, id int64, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	return nil, notImplemented()
 }
 func (ClientSDKmock) StatsDuration(ctx context.Context, params *StatsDurationParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
