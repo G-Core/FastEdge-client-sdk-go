@@ -845,7 +845,9 @@ paths:
                 content:
                     application/json:
                         schema:
-                            $ref: ./schemas.yml#/components/schemas/modify_store_data_payload
+                            items:
+                                $ref: ./schemas.yml#/components/schemas/modify_store_data_entry
+                            type: array
                 description: Key-value pair details
                 required: true
             responses:

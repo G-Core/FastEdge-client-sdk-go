@@ -453,8 +453,8 @@ type Log struct {
 	Timestamp *time.Time `json:"timestamp,omitempty"`
 }
 
-// ModifyStoreDataPayload defines model for modify_store_data_payload.
-type ModifyStoreDataPayload = []struct {
+// ModifyStoreDataEntry defines model for modify_store_data_entry.
+type ModifyStoreDataEntry struct {
 	// Embedded struct due to allOf(#/components/schemas/store_entry)
 	StoreEntry `yaml:",inline"`
 	// Embedded fields due to inline allOf schema
