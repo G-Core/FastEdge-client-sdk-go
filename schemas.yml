@@ -20,7 +20,7 @@ components:
       - status
       - binary
       - api_type
-      - plan
+      - plan_id
       type: object
       properties:
         id:
@@ -71,9 +71,13 @@ components:
           type: integer
           format: int64
           description: ID of the binary the app can be upgraded to
+        plan_id:
+          type: integer
+          format: int64
+          description: Application plan ID
         plan:
           type: string
-          description: Application plan
+          description: Application plan name
     app:
       type: object
       properties:
@@ -99,6 +103,11 @@ components:
         status:
           type: integer
           description: 'Status code:<br>0 - draft (inactive)<br>1 - enabled<br>2 - disabled<br>3 - hourly call limit exceeded<br>4 - daily call limit exceeded<br>5 - suspended'
+        plan_id:
+          readOnly: true
+          type: integer
+          format: int64
+          description: Plan ID
         plan:
           readOnly: true
           type: string
@@ -152,6 +161,11 @@ components:
           description: Application secrets
           additionalProperties:
             $ref: '#/components/schemas/app_secret_short'
+        stores:
+          type: object
+          description: Application KV stores
+          additionalProperties:
+            $ref: '#/components/schemas/app_store'
     binary_short:
       required:
       - id
@@ -276,7 +290,7 @@ components:
         data_type:
           type: string
           description: Parameter type
-          enum: [string, number, date, time, secret]
+          enum: [string, number, date, time, secret, store]
         mandatory:
           type: boolean
           description: Is this field mandatory?
@@ -363,7 +377,7 @@ components:
       - app_count
       - monthly_consumption
       - networks
-      - plan
+      - plan_id
       type: object
       properties:
         status:
@@ -395,7 +409,12 @@ components:
           description: List of enabled networks
           items:
             $ref: '#/components/schemas/network'
+        plan_id:
+          type: integer
+          format: int64
+          description: Plan ID
         plan:
+          readOnly: true
           type: string
           description: Plan name
     secret_short:
@@ -541,8 +560,13 @@ components:
       - mem_limit
       - max_subrequests
       - reseller_id
+      - name
       type: object
       properties:
+        id:
+          type: integer
+          format: int64
+          description: Plan ID
         max_duration:
           type: integer
           description: Max duration in msec
@@ -557,6 +581,7 @@ components:
           default: 0
         billing_plan_id:
           type: integer
+          format: int64
           description: Billing plan ID
           default: 0
         reseller_id:
@@ -564,15 +589,19 @@ components:
           format: int64
           description: Reseller plan ID
           default: 0
+        name:
+          type: string
+          description: Plan name
     clientUpdate:
       type: object
       required:
-      - plan
+      - plan_id
       - networks
       properties:
-        plan:
-          type: string
-          description: Plan name
+        plan_id:
+          type: integer
+          format: int64
+          description: Plan ID
         networks:
           type: array
           description: List of available networks
@@ -626,8 +655,8 @@ components:
       type: object
       properties:
         metrics:
-            type: object
-            $ref: '#/components/schemas/prebillingMetric'
+          type: object
+          $ref: '#/components/schemas/prebillingMetric'
         client:
           type: integer
         billing_plan:
@@ -731,3 +760,198 @@ components:
               items:
                 type: integer
                 format: int64
+    kv_store_short:
+      type: object
+      required:
+      - id
+      - name
+      - app_count
+      - size
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: The unique identifier of the store
+          readOnly: true
+          x-go-type-skip-optional-pointer: true
+        name:
+          type: string
+          description: A name of the store
+        comment:
+          type: string
+          description: A description of the store
+        updated:
+          type: string
+          format: date-time
+          description: Last update time
+          readOnly: true
+          x-go-type-skip-optional-pointer: true
+        app_count:
+          type: integer
+          description: The number of applications that use this store
+          x-omitempty: false
+        size:
+          type: integer
+          format: int64
+          description: Total store size in bytes
+          x-omitempty: false
+    kv_store:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: A name of the store
+        comment:
+          type: string
+          description: A description of the store
+        updated:
+          type: string
+          format: date-time
+          description: Last update time
+          readOnly: true
+          x-go-type-skip-optional-pointer: true
+        app_count:
+          type: integer
+          description: The number of applications that use this store
+          readOnly: true
+          x-go-type-skip-optional-pointer: true
+          x-omitempty: false
+        byod:
+          type: object
+          $ref: '#/components/schemas/byod'
+        size:
+          type: integer
+          format: int64
+          description: Total store size in bytes
+          readOnly: true
+          x-go-type-skip-optional-pointer: true
+          x-omitempty: false
+        revision:
+          type: integer
+          format: int64
+          description: Current store revision
+          readOnly: true
+          x-go-type-skip-optional-pointer: true
+    byod:
+      type: object
+      description: BYOD (Bring Your Own Data) settings
+      required:
+        - url
+        - prefix
+      properties:
+        url:
+          type: string
+          description: URL to connect to
+        prefix:
+          type: string
+          description: Key prefix
+    store_entry_short:
+      type: object
+      description: KV store entry
+      required:
+        - key
+        - datatype
+      properties:
+        key:
+          type: string
+          description: Key of the item
+        datatype:
+          $ref: '#/components/schemas/kv_datatype'
+        payload:
+          $ref: '#/components/schemas/store_kv_pair_value'
+    store_entry:
+      type: object
+      description: KV store entry
+      required:
+        - key
+        - datatype
+      properties:
+        key:
+          type: string
+          description: Key of the item
+        datatype:
+          $ref: '#/components/schemas/kv_datatype'
+        payload:
+          anyOf:
+          - $ref: '#/components/schemas/store_kv_pair_value'
+          - $ref: '#/components/schemas/store_sorted_set'
+          - $ref: '#/components/schemas/store_bloom_filter'
+    store_entry_op:
+      type: string
+      description: Data operation
+      enum: [add, del_key, del_entries]
+    store_kv_pair_value:
+      type: object
+      description: KV pair value
+      allOf:
+      - $ref: '#/components/schemas/encoded_value'
+      - type: object
+        properties:
+          expiry:
+            type: string
+            description: Expiration time in RFC3339 format
+    store_sorted_set:
+      type: array
+      description: Sorted set items
+      items:
+        $ref: '#/components/schemas/store_sorted_set_item'
+    store_sorted_set_item:
+      type: object
+      description: Sorted set item
+      required:
+        - value
+      allOf:
+      - $ref: '#/components/schemas/encoded_value'
+      - type: object
+        properties:
+          score:
+            type: number
+            format: double
+            description: Score for sorted set item, not required for delete op
+    store_bloom_filter:
+      type: array
+      description: Bloom filter
+      items:
+        $ref: '#/components/schemas/encoded_value'
+    kv_datatype:
+      type: string
+      description: Data type of the item
+      enum: [kv, sorted_set, bloom_filter]
+    encoded_value:
+      type: object
+      description: Value with encoding
+      required:
+        - value
+      properties:
+        value:
+          type: string
+          description: Value
+        encoding:
+          type: string
+          description: Encoding of the value
+          enum: [plain, base64, sha256]
+          default: plain
+          x-go-type-skip-optional-pointer: true
+    app_store:
+      type: object
+      description: Application stores
+      required:
+      - id
+      - name
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: The identifier of the store
+        name:
+          type: string
+          readOnly: true
+          x-go-type-skip-optional-pointer: true
+          description: The name of the store
+        comment:
+          type: string
+          readOnly: true
+          description: A description of the store
+

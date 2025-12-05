@@ -52,12 +52,13 @@ paths:
                   schema:
                     format: int64
                     type: integer
-                - description: App plan name
+                - description: Plan ID
                   in: query
                   name: plan
                   required: false
                   schema:
-                    type: string
+                    format: int64
+                    type: integer
                 - description: Limit for pagination
                   in: query
                   name: limit
@@ -379,6 +380,10 @@ paths:
                         application/json:
                             schema:
                                 properties:
+                                    count:
+                                        description: Number of logs available
+                                        format: int32
+                                        type: integer
                                     logs:
                                         items:
                                             $ref: ./schemas.yml#/components/schemas/log
@@ -388,9 +393,12 @@ paths:
                                         format: int32
                                         type: integer
                                     total_count:
-                                        description: Number of total logs available
+                                        deprecated: true
+                                        description: Number of total logs available (do not use, to be removed)
                                         format: int32
                                         type: integer
+                                required:
+                                    - count
                                 type: object
                     description: A paged array of logs
                 400:
@@ -557,6 +565,426 @@ paths:
             summary: Store compiled WASM binary
             tags:
                 - Binaries
+    /v1/kv:
+        get:
+            operationId: listStores
+            parameters:
+                - description: App ID
+                  in: query
+                  name: app_id
+                  schema:
+                    format: int64
+                    type: integer
+                - description: Limit for pagination
+                  in: query
+                  name: limit
+                  schema:
+                    type: integer
+                - description: Offset for pagination
+                  in: query
+                  name: offset
+                  schema:
+                    type: integer
+            responses:
+                200:
+                    content:
+                        application/json:
+                            schema:
+                                properties:
+                                    count:
+                                        description: Total number of stores
+                                        type: integer
+                                    stores:
+                                        items:
+                                            $ref: ./schemas.yml#/components/schemas/kv_store_short
+                                        type: array
+                                required:
+                                    - count
+                                    - stores
+                                type: object
+                    description: Ok
+                404:
+                    description: Not found
+            summary: List available stores
+            tags:
+                - KV Storage
+        post:
+            operationId: addStore
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: ./schemas.yml#/components/schemas/kv_store
+                description: Key-value pair details
+                required: true
+            responses:
+                200:
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: ./schemas.yml#/components/schemas/kv_store
+                                    - properties:
+                                        id:
+                                            description: The unique identifier of the store.
+                                            format: int64
+                                            type: integer
+                                            x-go-type-skip-optional-pointer: true
+                                      type: object
+                    description: Ok
+                400:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: ./schemas.yml#/components/schemas/error
+                    description: Bad request
+                503:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: ./schemas.yml#/components/schemas/error
+                    description: Service unavailable
+            summary: Add a new KV store
+            tags:
+                - KV Storage
+    /v1/kv/{id}:
+        delete:
+            operationId: delStore
+            parameters:
+                - description: Id of the store
+                  in: path
+                  name: id
+                  required: true
+                  schema:
+                    format: int64
+                    type: integer
+            responses:
+                204:
+                    description: Ok
+                400:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: ./schemas.yml#/components/schemas/error
+                    description: Bad request
+                404:
+                    description: Not found
+                409:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: ./schemas.yml#/components/schemas/conflictError
+                    description: Store referenced
+                503:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: ./schemas.yml#/components/schemas/error
+                    description: Service unavailable
+            summary: Delete a store
+            tags:
+                - KV Storage
+        get:
+            operationId: getStore
+            parameters:
+                - description: Id of the store
+                  in: path
+                  name: id
+                  required: true
+                  schema:
+                    format: int64
+                    type: integer
+            responses:
+                200:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: ./schemas.yml#/components/schemas/kv_store
+                    description: Ok
+                404:
+                    description: Not found
+            summary: Get store by id
+            tags:
+                - KV Storage
+        put:
+            description: Update a store
+            operationId: updateStore
+            parameters:
+                - description: Id of the store
+                  in: path
+                  name: id
+                  required: true
+                  schema:
+                    format: int64
+                    type: integer
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: ./schemas.yml#/components/schemas/kv_store
+                description: Store details
+            responses:
+                200:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: ./schemas.yml#/components/schemas/kv_store
+                    description: Ok
+                400:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: ./schemas.yml#/components/schemas/error
+                    description: Bad request
+                404:
+                    description: Not found
+                503:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: ./schemas.yml#/components/schemas/error
+                    description: Service unavailable
+            summary: Update a store
+            tags:
+                - KV Storage
+    /v1/kv/{id}/data:
+        get:
+            operationId: getStoreData
+            parameters:
+                - description: Id of the store
+                  in: path
+                  name: id
+                  required: true
+                  schema:
+                    format: int64
+                    type: integer
+                - description: Data type filter
+                  in: query
+                  name: data_type
+                  required: false
+                  schema:
+                    items:
+                        $ref: ./schemas.yml#/components/schemas/kv_datatype
+                    type: array
+                - description: Key prefix to search for
+                  in: query
+                  name: search
+                  required: false
+                  schema:
+                    type: string
+                - description: Minimum score for sorted set
+                  in: query
+                  name: min_score
+                  required: false
+                  schema:
+                    format: double
+                    type: number
+                - description: Maximum score for sorted set
+                  in: query
+                  name: max_score
+                  required: false
+                  schema:
+                    format: double
+                    type: number
+                - description: Limit for pagination
+                  in: query
+                  name: limit
+                  schema:
+                    type: integer
+                - description: Offset for pagination
+                  in: query
+                  name: offset
+                  schema:
+                    type: integer
+            responses:
+                200:
+                    content:
+                        application/json:
+                            schema:
+                                properties:
+                                    count:
+                                        description: Total number of entries
+                                        type: integer
+                                    entries:
+                                        items:
+                                            $ref: ./schemas.yml#/components/schemas/store_entry_short
+                                        type: array
+                                required:
+                                    - count
+                                    - entries
+                                type: object
+                    description: Ok
+                400:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: ./schemas.yml#/components/schemas/error
+                    description: Bad request
+                404:
+                    description: Not found
+            summary: Get store data
+            tags:
+                - KV Storage
+        put:
+            operationId: modifyStoreData
+            parameters:
+                - description: Id of the store
+                  in: path
+                  name: id
+                  required: true
+                  schema:
+                    format: int64
+                    type: integer
+                - description: Force data type change
+                  in: query
+                  name: force
+                  schema:
+                    default: false
+                    type: boolean
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            items:
+                                allOf:
+                                    - $ref: ./schemas.yml#/components/schemas/store_entry
+                                    - properties:
+                                        op:
+                                            $ref: ./schemas.yml#/components/schemas/store_entry_op
+                                      required:
+                                        - op
+                                      type: object
+                            type: array
+                description: Key-value pair details
+                required: true
+            responses:
+                200:
+                    content:
+                        application/json:
+                            schema:
+                                properties:
+                                    del_count:
+                                        description: Number of deletes from the store
+                                        type: integer
+                                    revision:
+                                        description: Current store revision
+                                        format: int64
+                                        type: integer
+                                    store_size:
+                                        description: Total store size in bytes
+                                        type: integer
+                                        x-omitempty: false
+                                    write_count:
+                                        description: Number of writes to the store
+                                        type: integer
+                                    write_size:
+                                        description: Size data written to the store in bytes
+                                        type: integer
+                                required:
+                                    - store_size
+                                    - revision
+                                    - write_count
+                                    - del_count
+                                    - write_size
+                                type: object
+                    description: Ok
+                400:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: ./schemas.yml#/components/schemas/error
+                    description: Bad request
+                404:
+                    description: Not found
+                503:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: ./schemas.yml#/components/schemas/error
+                    description: Service unavailable
+            summary: Modify data in store
+            tags:
+                - KV Storage
+    /v1/kv/{id}/data/{key}:
+        get:
+            operationId: getStoreDataKey
+            parameters:
+                - description: Id of the store
+                  in: path
+                  name: id
+                  required: true
+                  schema:
+                    format: int64
+                    type: integer
+                - description: Key
+                  in: path
+                  name: key
+                  required: true
+                  schema:
+                    type: string
+                - description: Value prefix to search for
+                  in: query
+                  name: search
+                  required: false
+                  schema:
+                    type: string
+                - description: Value hash to search for
+                  in: query
+                  name: hash
+                  required: false
+                  schema:
+                    type: string
+                - description: Minimum score for sorted set
+                  in: query
+                  name: min_score
+                  required: false
+                  schema:
+                    format: double
+                    type: number
+                - description: Maximim score for sorted set
+                  in: query
+                  name: max_score
+                  required: false
+                  schema:
+                    format: double
+                    type: number
+                - description: Limit for pagination
+                  in: query
+                  name: limit
+                  schema:
+                    type: integer
+                - description: Offset for pagination
+                  in: query
+                  name: offset
+                  schema:
+                    type: integer
+            responses:
+                200:
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: ./schemas.yml#/components/schemas/store_entry
+                                    - properties:
+                                        count:
+                                            description: Total number of entries
+                                            type: integer
+                                      required:
+                                        - count
+                                      type: object
+                                type: object
+                    description: Ok
+                400:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: ./schemas.yml#/components/schemas/error
+                    description: Bad request
+                404:
+                    description: Not found
+            summary: Get store data
+            tags:
+                - KV Storage
     /v1/me:
         get:
             operationId: getClientMe
@@ -952,7 +1380,7 @@ paths:
                         - wasi-http
                         - proxy-wasm
                     type: string
-                - description: Only mine templates
+                - description: Only my templates
                   in: query
                   name: only_mine
                   required: false
@@ -1037,6 +1465,11 @@ paths:
                   schema:
                     format: int64
                     type: integer
+                - description: Force template deletion even if it is shared to groups
+                  in: query
+                  name: force
+                  schema:
+                    type: boolean
             responses:
                 204:
                     description: Ok
@@ -1133,3 +1566,7 @@ tags:
       name: Binaries
     - description: Statistics of edge app use
       name: Stats
+    - description: Secret values that can be used in apps
+      name: Secrets
+    - description: Key-value storage for apps
+      name: KV Storage

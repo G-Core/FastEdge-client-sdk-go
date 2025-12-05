@@ -117,7 +117,7 @@ func (ClientSDKmock) AddTemplateWithBody(ctx context.Context, contentType string
 func (ClientSDKmock) AddTemplate(ctx context.Context, body AddTemplateJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	return nil, notImplemented()
 }
-func (ClientSDKmock) DelTemplate(ctx context.Context, id int64, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (ClientSDKmock) DelTemplate(context.Context, int64, *DelTemplateParams, ...RequestEditorFn) (*http.Response, error) {
 	return nil, notImplemented()
 }
 func (ClientSDKmock) GetTemplate(ctx context.Context, id int64, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -127,6 +127,51 @@ func (ClientSDKmock) UpdateTemplateWithBody(ctx context.Context, id int64, conte
 	return nil, notImplemented()
 }
 func (ClientSDKmock) UpdateTemplate(ctx context.Context, id int64, body UpdateTemplateJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	return nil, notImplemented()
+}
+
+func (ClientSDKmock) ListStores(ctx context.Context, params *ListStoresParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	return nil, notImplemented()
+}
+
+func (ClientSDKmock) AddStoreWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	return nil, notImplemented()
+}
+
+func (ClientSDKmock) AddStore(ctx context.Context, body AddStoreJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	return nil, notImplemented()
+}
+
+func (ClientSDKmock) DelStore(ctx context.Context, id int64, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	return nil, notImplemented()
+}
+
+func (ClientSDKmock) GetStore(ctx context.Context, id int64, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	return nil, notImplemented()
+}
+
+func (ClientSDKmock) UpdateStoreWithBody(ctx context.Context, id int64, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	return nil, notImplemented()
+}
+
+func (ClientSDKmock) UpdateStore(ctx context.Context, id int64, body UpdateStoreJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	return nil, notImplemented()
+}
+
+// GetStoreData request
+func (ClientSDKmock) GetStoreData(ctx context.Context, id int64, params *GetStoreDataParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	return nil, notImplemented()
+}
+
+func (ClientSDKmock) ModifyStoreDataWithBody(ctx context.Context, id int64, params *ModifyStoreDataParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	return nil, notImplemented()
+}
+
+func (ClientSDKmock) ModifyStoreData(ctx context.Context, id int64, params *ModifyStoreDataParams, body ModifyStoreDataJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	return nil, notImplemented()
+}
+
+func (ClientSDKmock) GetStoreDataKey(ctx context.Context, id int64, key string, params *GetStoreDataKeyParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	return nil, notImplemented()
 }
 
