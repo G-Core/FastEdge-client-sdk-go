@@ -845,16 +845,7 @@ paths:
                 content:
                     application/json:
                         schema:
-                            items:
-                                allOf:
-                                    - $ref: ./schemas.yml#/components/schemas/store_entry
-                                    - properties:
-                                        op:
-                                            $ref: ./schemas.yml#/components/schemas/store_entry_op
-                                      required:
-                                        - op
-                                      type: object
-                            type: array
+                            $ref: ./schemas.yml#/components/schemas/modify_store_data_payload
                 description: Key-value pair details
                 required: true
             responses:

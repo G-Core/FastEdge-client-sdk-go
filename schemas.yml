@@ -861,6 +861,17 @@ components:
           $ref: '#/components/schemas/kv_datatype'
         payload:
           $ref: '#/components/schemas/store_kv_pair_value'
+    modify_store_data_payload:
+      type: array
+      items:
+        allOf:
+        - $ref: '#/components/schemas/store_entry'
+        - type: object
+          required:
+          - op
+          properties:
+            op:
+              $ref: '#/components/schemas/store_entry_op'
     store_entry:
       type: object
       description: KV store entry
