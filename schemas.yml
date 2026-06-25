@@ -20,13 +20,14 @@ components:
       - status
       - binary
       - api_type
-      - plan
+      - plan_id
       type: object
       properties:
         id:
           type: integer
           format: int64
           description: App ID
+          minimum: 1
         name:
           type: string
           description: App name
@@ -71,23 +72,34 @@ components:
           type: integer
           format: int64
           description: ID of the binary the app can be upgraded to
+        plan_id:
+          type: integer
+          format: int64
+          description: Application plan ID
         plan:
           type: string
-          description: Application plan
+          description: Application plan name
     app:
       type: object
       properties:
         name:
           type: string
-          description: App name
+          description: Unique application name (alphanumeric, hyphens allowed)
+          minLength: 1
+          maxLength: 64
+          pattern: "^[a-z0-9][a-z0-9-]*[a-z0-9]$"
+          example: "my-edge-app"
         url:
           type: string
           readOnly: true
-          description: App URL
+          description: Auto-generated URL where the application is accessible
+          example: "my-edge-app.fastedge.gcore.dev"
         binary:
           type: integer
           format: int64
-          description: Binary ID
+          description: ID of the WebAssembly binary to deploy
+          minimum: 1
+          example: 12345
         template:
           type: integer
           format: int64
@@ -98,7 +110,15 @@ components:
           description: Template name
         status:
           type: integer
-          description: 'Status code:<br>0 - draft (inactive)<br>1 - enabled<br>2 - disabled<br>3 - hourly call limit exceeded<br>4 - daily call limit exceeded<br>5 - suspended'
+          description: 'Status code:<br>0 - draft (inactive)<br>1 - enabled<br>2 - disabled<br>5 - suspended'
+          minimum: 0
+          maximum: 5
+          example: 1
+        plan_id:
+          readOnly: true
+          type: integer
+          format: int64
+          description: Plan ID
         plan:
           readOnly: true
           type: string
@@ -120,15 +140,16 @@ components:
             header1: value1
             header2: value2
         log:
+          deprecated: true
           type: string
-          description: Logging channel (by default - kafka, which allows exploring logs with API)
           nullable: true
           enum: [kafka, none]
         debug:
           type: boolean
           writeOnly: true
-          description: Switch on logging for 30 minutes (switched off by default)
+          description: Enable verbose debug logging for 30 minutes. Automatically expires to prevent performance impact.
           default: false
+          example: false
         debug_until:
           type: string
           format: date-time
@@ -136,7 +157,9 @@ components:
           description: When debugging finishes
         comment:
           type: string
-          description: App description
+          description: Optional human-readable description of the application's purpose
+          maxLength: 1024
+          example: "Production API gateway for customer portal"
         api_type:
           readOnly: true
           type: string
@@ -152,6 +175,11 @@ components:
           description: Application secrets
           additionalProperties:
             $ref: '#/components/schemas/app_secret_short'
+        stores:
+          type: object
+          description: Application edge stores
+          additionalProperties:
+            $ref: '#/components/schemas/app_store'
     binary_short:
       required:
       - id
@@ -175,6 +203,11 @@ components:
         checksum:
           type: string
           description: MD5 hash of the binary
+        source:
+          type: integer
+          description: 'Source language:<br>0 - unknown<br>1 - Rust<br>2 - JavaScript<br>3 - Go'
+          minimum: 0
+          maximum: 3
     binary:
       required:
       - id
@@ -190,9 +223,13 @@ components:
         status:
           type: integer
           description: 'Status code:<br>0 - pending<br>1 - compiled<br>2 - compilation failed (errors available)<br>3 - compilation failed (errors not available)<br>4 - resulting binary exceeded the limit<br>5 - unsupported source language'
+          minimum: 0
+          maximum: 5
         source:
           type: integer
-          description: 'Source language:<br>0 - unknown<br>1 - Rust<br>2 - JavaScript'
+          description: 'Source language:<br>0 - unknown<br>1 - Rust<br>2 - JavaScript<br>3 - Go'
+          minimum: 0
+          maximum: 3
         unref_since:
           type: string
           description: Not used since (UTC)
@@ -241,16 +278,25 @@ components:
         binary_id:
           type: integer
           format: int64
-          description: Binary ID
+          description: ID of the WebAssembly binary to use for this template
+          example: 12345
         name:
           type: string
-          description: Name of the template
+          description: Unique name for the template (used for identification and searching)
+          minLength: 1
+          maxLength: 128
+          pattern: "^[a-zA-Z0-9_ -]*$"
+          example: "api-gateway-template"
         short_descr:
           type: string
-          description: Short description of the template
+          description: Brief one-line description displayed in template listings
+          maxLength: 255
+          example: "HTTP API gateway with authentication"
         long_descr:
           type: string
-          description: Long description of the template
+          description: Detailed markdown description explaining template features and usage
+          maxLength: 4096
+          example: "Complete API gateway solution with JWT authentication, rate limiting, and request transformation capabilities."
         api_type:
           readOnly: true
           type: string
@@ -272,18 +318,27 @@ components:
       properties:
         name:
           type: string
-          description: Parameter name
+          description: Parameter name used as a placeholder in template (e.g., API_KEY, DATABASE_URL)
+          minLength: 1
+          maxLength: 64
+          example: "api_key"
         data_type:
           type: string
-          description: Parameter type
-          enum: [string, number, date, time, secret]
+          description: 'Parameter type determines validation and UI rendering:<br>string - text input<br>number - numeric input<br>date - date picker<br>time - time picker<br>secret - references a secret<br>store - references an edge store<br>bool - boolean toggle<br>json - JSON editor or multiline text area with JSON validation<br>enum - dropdown/select with allowed values defined via parameter metadata'
+          enum: [string, number, date, time, secret, store, bool, json, enum]
+          example: "string"
         mandatory:
           type: boolean
-          description: Is this field mandatory?
+          description: If true, this parameter must be provided when instantiating the template
           default: false
+          example: true
         descr:
           type: string
-          description: Parameter description
+          description: Human-readable explanation of what this parameter controls
+          example: "API key for external service authentication"
+        metadata:
+          type: string
+          description: Optional JSON-encoded string for additional parameter metadata, such as allowed values for enum types
     call_stats:
       type: object
       description: Edge app call statistics
@@ -327,7 +382,7 @@ components:
         time:
           type: string
           format: date-time
-          description: Beginning ot reporting slot
+          description: Beginning of reporting slot
         min:
           type: integer
           format: int64
@@ -352,38 +407,138 @@ components:
           type: integer
           format: int64
           description: 90% percentile duration in usec
+    admin_stats:
+      type: object
+      description: |
+        Aggregated FastEdge usage statistics for one group. The group-key fields
+        (client_id, app_id, region, country) are present only for the dimensions
+        requested in group_by.
+      required:
+      - total_count
+      - exec_time
+      - status_counts
+      properties:
+        client_id:
+          type: integer
+          format: int64
+          description: Client ID (present when grouped by client)
+        app_id:
+          type: integer
+          format: int64
+          description: Application ID (present when grouped by app)
+        region:
+          type: string
+          description: Region (present when grouped by region)
+        country:
+          type: string
+          description: Country (present when grouped by country)
+        total_count:
+          type: integer
+          format: int64
+          description: Total number of requests in the group
+        exec_time:
+          $ref: '#/components/schemas/admin_stats_exec_time'
+        status_counts:
+          $ref: '#/components/schemas/admin_stats_status_counts'
+    admin_stats_exec_time:
+      type: object
+      description: Execution-time statistics in milliseconds
+      required:
+      - min
+      - max
+      - avg
+      - median
+      - perc75
+      - perc90
+      properties:
+        min:
+          type: number
+          format: double
+          description: Min execution time in ms
+        max:
+          type: number
+          format: double
+          description: Max execution time in ms
+        avg:
+          type: number
+          format: double
+          description: Average execution time in ms
+        median:
+          type: number
+          format: double
+          description: Median (50th percentile) execution time in ms
+        perc75:
+          type: number
+          format: double
+          description: 75th percentile execution time in ms
+        perc90:
+          type: number
+          format: double
+          description: 90th percentile execution time in ms
+    admin_stats_status_counts:
+      type: object
+      description: Request counts by HTTP status class.
+      required:
+      - success
+      - count_3xx
+      - count_4xx
+      - count_5xx
+      properties:
+        success:
+          type: integer
+          format: int64
+          description: 'Successful requests: status 0 (for CDN apps) or 2xx'
+        count_3xx:
+          type: integer
+          format: int64
+          description: Number of 3xx responses
+        count_4xx:
+          type: integer
+          format: int64
+          description: Number of 4xx responses
+        count_5xx:
+          type: integer
+          format: int64
+          description: Number of 5xx responses
+    client_short:
+      type: object
+      required:
+      - id
+      - name
+      - email
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Client ID
+        name:
+          type: string
+          description: Client name
+        email:
+          type: string
+          description: Client e-mail address
     client:
       required:
       - status
-      - hourly_limit
       - hourly_consumption
-      - daily_limit
       - daily_consumption
-      - app_limit
       - app_count
       - monthly_consumption
       - networks
-      - plan
+      - plan_id
       type: object
       properties:
         status:
           type: integer
-          description: 'Status code:<br>1 - enabled<br>2 - disabled<br>3 - hourly call limit exceeded<br>4 - daily call limit exceeded<br>5 - suspended'
-        hourly_limit:
-          type: integer
-          description: Max allowed calls for all apps during an hour
+          description: 'Status code:<br>1 - enabled<br>2 - disabled<br>5 - suspended'
+          minimum: 1
+          maximum: 5
         hourly_consumption:
           type: integer
           description: Actual number of calls for all apps during the current hour
-        daily_limit:
-          type: integer
-          description: Max allowed calls for all apps during a day (UTC)
         daily_consumption:
           type: integer
           description: Actual number of calls for all apps during the current day (UTC)
-        app_limit:
-          type: integer
-          description: Max allowed number of apps
         app_count:
           type: integer
           description: Actual allowed number of apps
@@ -395,7 +550,12 @@ components:
           description: List of enabled networks
           items:
             $ref: '#/components/schemas/network'
+        plan_id:
+          type: integer
+          format: int64
+          description: Plan ID
         plan:
+          readOnly: true
           type: string
           description: Plan name
     secret_short:
@@ -442,15 +602,19 @@ components:
         slot:
           type: integer
           format: int64
-          description: "Secret slot ID."
+          description: "Unix timestamp (seconds since epoch) indicating when this secret version becomes active. Use for time-based secret rotation."
+          example: 1704067200
         value:
           type: string
-          description: "The value of the secret."
+          description: "The plaintext secret value. Will be encrypted with AES-256-GCM before storage."
           writeOnly: true
+          maxLength: 4096
+          example: "P@ssw0rd123!"
         checksum:
           type: string
-          description: "A checksum of the secret value for integrity verification."
+          description: "SHA-256 hash of the decrypted value for integrity verification (auto-generated)"
           readOnly: true
+          example: "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"
       required:
         - slot
     secret:
@@ -459,9 +623,13 @@ components:
         name:
           type: string
           description: "The unique name of the secret."
+          minLength: 1
+          maxLength: 128
+          pattern: "^[a-zA-Z0-9][a-zA-Z0-9_-]*[a-zA-Z0-9]$"
         comment:
           type: string
           description: "A description or comment about the secret."
+          maxLength: 1024
         app_count:
           type: integer
           format: int
@@ -477,29 +645,26 @@ components:
       properties:
         id:
           type: string
-          title: Id of the log
-          description: Id of the log
+          description: Unique identifier for this log entry
         app_name:
           type: string
-          title: Name of the application
-          description: Name of the application
+          description: Name of the application that generated this log
         timestamp:
           type: string
           format: date-time
-          title: Timstamp of a log in RFC3339 format
-          description: Timestamp of a log in RFC3339 format
+          description: When the log was generated (RFC3339 format)
         log:
           type: string
-          title: Log message
-          description: Log message
+          description: The actual log message content
         edge:
           type: string
-          title: Edge name 
-          description: Edge name
+          description: Edge location where the log originated
         client_ip:
           type: string
-          title: Client IP
-          description: Client IP
+          description: IP address of the client that triggered the log
+        request_id:
+          type: string
+          description: Request ID
     error:
       type: object
       required:
@@ -532,6 +697,9 @@ components:
         name:
           type: string
           description: Network name
+          minLength: 1
+          maxLength: 64
+          pattern: "^[a-z0-9][a-z0-9_-]*[a-z0-9]$"
         is_default:
           type: boolean
           description: Is network is default
@@ -541,22 +709,29 @@ components:
       - mem_limit
       - max_subrequests
       - reseller_id
+      - name
       type: object
       properties:
+        id:
+          type: integer
+          format: int64
+          description: Plan ID
         max_duration:
           type: integer
-          description: Max duration in msec
-          default: 5
+          description: Maximum execution time per request in milliseconds. Requests exceeding this limit are terminated.
+          minimum: 1
+          example: 50
         mem_limit:
           type: integer
-          description: Max memory in bytes
-          default: 2097152
+          description: Maximum memory allocation per instance in bytes. Prevents runaway memory usage.
+          example: 10485760
         max_subrequests:
           type: integer
-          description: Max number of external network requests (0 means disabled)
-          default: 0
+          deprecated: true
+          description: Maximum number of outgoing HTTP requests allowed per invocation (0 disables external requests)
         billing_plan_id:
           type: integer
+          format: int64
           description: Billing plan ID
           default: 0
         reseller_id:
@@ -564,15 +739,30 @@ components:
           format: int64
           description: Reseller plan ID
           default: 0
+        name:
+          type: string
+          description: Unique plan identifier (alphanumeric and hyphens)
+          minLength: 1
+          maxLength: 64
+          pattern: "^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]$"
+          example: "enterprise-tier"
+        cache_mode:
+          type: integer
+          description: 'Caching mode:<br>0 - no caching<br>1 - client-scoped caching<br>2 - app-scoped caching'
+          enum: [0, 1, 2]
+          default: 0
+          writeOnly: true
+          x-go-type-skip-optional-pointer: true
     clientUpdate:
       type: object
       required:
-      - plan
+      - plan_id
       - networks
       properties:
-        plan:
-          type: string
-          description: Plan name
+        plan_id:
+          type: integer
+          format: int64
+          description: Plan ID
         networks:
           type: array
           description: List of available networks
@@ -620,20 +810,78 @@ components:
       properties:
         number_of_calls:
           type: integer
+          format: int64
+          description: Number of app calls
+        exec_time:
+          type: integer
+          format: int64
+          description: Total app execution time, in seconds
         total_runtime_mms:
-          type: number 
+          type: number
+          deprecated: true
+          description: Total app execution time, in million milliseconds (1000 seconds) units
+        kv_read_count:
+          type: integer
+          format: int64
+          description: Number of read operations
+        kv_write_size:
+          type: integer
+          format: int64
+          description: Volume of write operations, in bytes
+        kv_storage_size:
+          type: number
+          format: double
+          description: Storage size used over time, in MB*hours
+        kv_del_count:
+          type: integer
+          format: int64
+          description: Number of delete operations
+    kvStoreStats:
+      type: object
+      required:
+        - read_count
+        - write_size
+        - storage_size
+        - del_count
+      properties:
+        time:
+          type: string
+          format: date-time
+          description: Beginning of reporting slot
+        read_count:
+          type: integer
+          format: int64
+          description: Number of read operations
+        write_size:
+          type: integer
+          format: int64
+          description: Volume of write operations, in bytes
+        storage_size:
+          type: number
+          format: double
+          description: Storage size used over time, in MB*hours
+        del_count:
+          type: integer
+          format: int64
+          description: Number of delete operations
     prebillingObject:
       type: object
+      required:
+        - metrics
       properties:
         metrics:
-            type: object
-            $ref: '#/components/schemas/prebillingMetric'
+          type: object
+          $ref: '#/components/schemas/prebillingMetric'
         client:
           type: integer
+          format: int64
         billing_plan:
           type: string 
         region:
           type: string
+        date:
+          type: string
+          format: date
     prebillingResponse:
       type: array
       items:
@@ -656,38 +904,35 @@ components:
           type: boolean
           description: Add new members to the group by default
           default: false
+        descr:
+          type: string
+          description: Group description
+          example: "Video streaming customers"
+        client_count:
+          type: integer
+          description: Number of members in the group
+        template_count:
+          type: integer
+          description: Number of templates in the group
     group:
       type: object
       required:
       - name
       - default_flag
-      - clients
-      - templates
       properties:
         name:
           type: string
           description: Group name
+          minLength: 1
+          maxLength: 128
         default_flag:
           type: boolean
           description: Add new members to the group by default
           default: false
-        clients:
-          type: array
-          items:
-            $ref: '#/components/schemas/group_member'
-        templates:
-          type: array
-          items:
-            $ref: '#/components/schemas/template_short_admin'
-    group_member:
-      type: object
-      required:
-      - id
-      properties:
-        id:
-          type: integer
-          format: int64
-          description: Client ID
+        descr:
+          type: string
+          description: Group description
+          example: "Video streaming customers"
     app_short_admin:
       type: object
       allOf:
@@ -731,3 +976,209 @@ components:
               items:
                 type: integer
                 format: int64
+    kv_store_short:
+      type: object
+      required:
+      - id
+      - name
+      - app_count
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: The unique identifier of the store
+          readOnly: true
+          x-go-type-skip-optional-pointer: true
+        name:
+          type: string
+          description: A name of the store
+        comment:
+          type: string
+          description: A description of the store
+        app_count:
+          type: integer
+          description: The number of applications that use this store
+          x-omitempty: false
+        size:
+          type: integer
+          format: int64
+          description: Total store size in bytes
+    kv_store:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: A name of the store
+        comment:
+          type: string
+          description: A description of the store
+        app_count:
+          type: integer
+          description: The number of applications that use this store
+          readOnly: true
+          x-go-type-skip-optional-pointer: true
+          x-omitempty: false
+        byod:
+          type: object
+          $ref: '#/components/schemas/byod'
+        size:
+          type: integer
+          format: int64
+          description: Total store size in bytes (zero for BYOD stores)
+          readOnly: true
+          x-go-type-skip-optional-pointer: true
+          x-omitempty: false
+        revision:
+          type: integer
+          format: int64
+          description: Current store revision (only for non-BYOD stores)
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp of last store revision (only for non-BYOD stores)
+          readOnly: true
+    byod:
+      type: object
+      description: BYOD (Bring Your Own Data) settings
+      required:
+        - url
+        - prefix
+      properties:
+        url:
+          type: string
+          description: Connection URL for external storage service (Redis, PostgreSQL, etc.)
+          example: "redis://redis.example.com:6379/0"
+        prefix:
+          type: string
+          description: Key prefix to namespace your data within the external store
+          example: "app:prod:"
+    store_entry_short:
+      type: object
+      description: Edge store entry
+      required:
+        - key
+        - datatype
+      properties:
+        key:
+          type: string
+          description: Key of the item
+          minLength: 1
+          maxLength: 256
+        datatype:
+          $ref: '#/components/schemas/kv_datatype'
+        payload:
+          $ref: '#/components/schemas/store_kv_pair_value'
+    modify_store_data_entry:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/store_entry'
+      - type: object
+        required:
+        - op
+        properties:
+          op:
+            $ref: '#/components/schemas/store_entry_op'
+    store_entry:
+      type: object
+      description: Edge store entry
+      required:
+        - key
+        - datatype
+      properties:
+        key:
+          type: string
+          description: Key of the item
+          minLength: 1
+          maxLength: 256
+        datatype:
+          $ref: '#/components/schemas/kv_datatype'
+        payload:
+          anyOf:
+          - $ref: '#/components/schemas/store_kv_pair_value'
+          - $ref: '#/components/schemas/store_sorted_set'
+          - $ref: '#/components/schemas/store_bloom_filter'
+    store_entry_op:
+      type: string
+      description: Data operation
+      enum: [add, del_key, del_entries]
+    store_kv_pair_value:
+      type: object
+      description: KV pair value
+      allOf:
+      - $ref: '#/components/schemas/encoded_value'
+      - type: object
+        properties:
+          expiry:
+            type: string
+            description: Optional expiration timestamp in RFC3339 format. Entry is automatically deleted after this time.
+            example: "2024-12-31T23:59:59Z"
+    store_sorted_set:
+      type: array
+      description: Sorted set items
+      items:
+        $ref: '#/components/schemas/store_sorted_set_item'
+    store_sorted_set_item:
+      type: object
+      description: Sorted set item
+      required:
+      - value
+      allOf:
+      - $ref: '#/components/schemas/encoded_value'
+      - type: object
+        properties:
+          score:
+            type: number
+            format: double
+            description: Numeric score for sorted set ranking. Lower scores appear first in sorted queries. Not required for delete operations.
+            example: 42.5
+    store_bloom_filter:
+      type: array
+      description: Bloom filter
+      items:
+        $ref: '#/components/schemas/encoded_value'
+    kv_datatype:
+      type: string
+      description: Data type of the item
+      enum: [kv, sorted_set, bloom_filter]
+    encoded_value:
+      type: object
+      description: Value with encoding
+      required:
+        - value
+      properties:
+        value:
+          type: string
+          description: Data value, encoded according to the specified encoding method (see 'encoding' field)
+          maxLength: 1048576
+          example: "John Doe"
+        encoding:
+          type: string
+          description: 'Value encoding method:<br>plain - unencoded text<br>base64 - base64-encoded binary data<br>sha256 - SHA-256 hash (output only), for fields larger than 1024 bytes'
+          enum: [plain, base64, sha256]
+          default: plain
+          x-go-type-skip-optional-pointer: true
+          example: "plain"
+    app_store:
+      type: object
+      description: Application stores
+      required:
+      - id
+      - name
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: The identifier of the store
+        name:
+          type: string
+          readOnly: true
+          x-go-type-skip-optional-pointer: true
+          description: The name of the store
+        comment:
+          type: string
+          readOnly: true
+          description: A description of the store
+
